@@ -3,6 +3,7 @@ import type {
   GradeRecoveryClass,
   GradeRecoveryResult,
   TargetResult,
+  CustomTargetResult,
   CategorySnapshot,
   ScenarioStatus,
   LetterGrade,
@@ -211,6 +212,33 @@ function computeTargetResult(
   };
 }
 
+function computeCustomTargetResult(
+  targetPercentage: number,
+  coeff: Coefficients,
+): CustomTargetResult {
+  const { numeratorConstant, remainingCoefficient } = coeff;
+
+  if (remainingCoefficient === 0) {
+    const currentTotal = numeratorConstant * 100;
+    return {
+      targetPercentage,
+      requiredAverage: null,
+      maxAchievable: currentTotal,
+      status: currentTotal >= targetPercentage ? 'already_achieved' : 'no_remaining_work',
+    };
+  }
+
+  const R = ((targetPercentage / 100 - numeratorConstant) / remainingCoefficient) * 100;
+  const maxAchievable = (numeratorConstant + remainingCoefficient) * 100;
+
+  return {
+    targetPercentage,
+    requiredAverage: R,
+    maxAchievable,
+    status: R < 0 ? 'already_achieved' : R > 100 ? 'impossible' : 'achievable',
+  };
+}
+
 export function computeGradeRecoveryResult(cls: GradeRecoveryClass): GradeRecoveryResult {
   const weights = computeNormalizedWeights(cls.categories, cls.normalizeWeights);
   const coeff = computeCoefficients(cls.categories, weights);
@@ -237,6 +265,10 @@ export function computeGradeRecoveryResult(cls: GradeRecoveryClass): GradeRecove
     targetResults[t] = computeTargetResult(t, pct, coeff, cls.categories, weights);
   }
 
+  const customTargetResults: CustomTargetResult[] = (cls.customTargets ?? []).map((pct) =>
+    computeCustomTargetResult(pct, coeff),
+  );
+
   return {
     currentGradePercentage,
     currentLetterGrade,
@@ -245,6 +277,7 @@ export function computeGradeRecoveryResult(cls: GradeRecoveryClass): GradeRecove
     _numeratorConstant: coeff.numeratorConstant,
     _remainingCoefficient: coeff.remainingCoefficient,
     targetResults: targetResults as Record<LetterGrade, TargetResult>,
+    customTargetResults,
   };
 }
 

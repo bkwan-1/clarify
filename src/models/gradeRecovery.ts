@@ -66,6 +66,7 @@ export interface GradeRecoveryClass {
   normalizeWeights: boolean;
   gradeScale: TargetGradeTier[];
   creditHours?: number;           // for cross-tool handoff
+  customTargets: number[];        // user-defined percentage targets e.g. [98, 95]
 }
 
 export interface CategorySnapshot {
@@ -94,6 +95,13 @@ export interface TargetResult {
   categorySnapshots: CategorySnapshot[];
 }
 
+export interface CustomTargetResult {
+  targetPercentage: number;
+  requiredAverage: number | null;
+  maxAchievable: number;
+  status: ScenarioStatus;
+}
+
 export interface GradeRecoveryResult {
   currentGradePercentage: number;
   currentLetterGrade: LetterGrade;
@@ -104,4 +112,6 @@ export interface GradeRecoveryResult {
   _remainingCoefficient: number;
   // Per-target results (precomputed for all standard targets)
   targetResults: Record<LetterGrade, TargetResult>;
+  // User-defined custom percentage targets
+  customTargetResults: CustomTargetResult[];
 }

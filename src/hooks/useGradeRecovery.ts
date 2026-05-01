@@ -70,6 +70,7 @@ export function useGradeRecovery() {
       activeTargets: ['A', 'B', 'C'],
       normalizeWeights: true,
       gradeScale: DEFAULT_GRADE_SCALE,
+      customTargets: [],
     };
 
     setStore((prev) => ({
@@ -264,6 +265,27 @@ export function useGradeRecovery() {
     }));
   }
 
+  function addCustomTarget(classId: string, pct: number) {
+    setStore((prev) => ({
+      ...prev,
+      classes: prev.classes.map((c) => {
+        if (c.id !== classId) return c;
+        const existing = c.customTargets ?? [];
+        if (existing.includes(pct)) return c;
+        return { ...c, customTargets: [...existing, pct].sort((a, b) => b - a) };
+      }),
+    }));
+  }
+
+  function removeCustomTarget(classId: string, pct: number) {
+    setStore((prev) => ({
+      ...prev,
+      classes: prev.classes.map((c) =>
+        c.id !== classId ? c : { ...c, customTargets: (c.customTargets ?? []).filter((t) => t !== pct) },
+      ),
+    }));
+  }
+
   return {
     classes: store.classes,
     activeClassId: store.activeClassId,
@@ -281,5 +303,7 @@ export function useGradeRecovery() {
     updateRemainingAssignment,
     deleteRemainingAssignment,
     setActiveTargets,
+    addCustomTarget,
+    removeCustomTarget,
   };
 }

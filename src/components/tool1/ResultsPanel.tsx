@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { GradeRecoveryResult } from '../../models/gradeRecovery';
 import type { GradeRecoveryClass, LetterGrade } from '../../models/gradeRecovery';
 import type { ActiveTool } from '../shell/TopNav';
@@ -8,6 +9,8 @@ interface ResultsPanelProps {
   onToggleTarget: (t: LetterGrade) => void;
   onSendToGPA: () => void;
   onSwitchTool: (tool: ActiveTool) => void;
+  onAddCustomTarget: (pct: number) => void;
+  onRemoveCustomTarget: (pct: number) => void;
 }
 
 const TARGETS: LetterGrade[] = ['A', 'B', 'C', 'D'];
@@ -19,7 +22,9 @@ const TARGET_STYLES: Record<string, string> = {
   D: 'border-[var(--border)] bg-[var(--bg-raised)] text-[var(--text-secondary)]',
 };
 
-export function ResultsPanel({ cls, result, onToggleTarget, onSendToGPA, onSwitchTool }: ResultsPanelProps) {
+export function ResultsPanel({ cls, result, onToggleTarget, onSendToGPA, onSwitchTool, onAddCustomTarget, onRemoveCustomTarget }: ResultsPanelProps) {
+  const [customInput, setCustomInput] = useState('');
+
   if (!result) {
     return (
       <aside className="w-[280px] shrink-0 border-l border-[var(--border)] p-4 flex items-center justify-center">
@@ -41,6 +46,13 @@ export function ResultsPanel({ cls, result, onToggleTarget, onSendToGPA, onSwitc
       : currentPct >= 70
       ? 'text-[var(--warning)]'
       : 'text-[var(--danger)]';
+
+  function handleAddCustom() {
+    const val = parseFloat(customInput);
+    if (isNaN(val) || val < 0 || val > 110) return;
+    onAddCustomTarget(Math.round(val * 10) / 10);
+    setCustomInput('');
+  }
 
   return (
     <aside className="w-[280px] shrink-0 border-l border-[var(--border)] flex flex-col h-full overflow-y-auto">
@@ -78,6 +90,29 @@ export function ResultsPanel({ cls, result, onToggleTarget, onSendToGPA, onSwitc
               </button>
             );
           })}
+        </div>
+
+        {/* Custom target input */}
+        <div className="flex items-center gap-1.5 mt-2">
+          <input
+            type="number"
+            min={0}
+            max={110}
+            step={0.1}
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
+            placeholder="Custom %"
+            className="flex-1 min-w-0 px-2 py-1 rounded-[6px] border border-[var(--border)] bg-[var(--bg-raised)] text-[12px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] outline-none focus:border-[var(--accent)] transition-colors"
+          />
+          <button
+            type="button"
+            onClick={handleAddCustom}
+            disabled={customInput === ''}
+            className="px-2 py-1 rounded-[6px] border border-[var(--accent)] text-[var(--accent)] text-[12px] font-medium hover:bg-[var(--accent-muted)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            +
+          </button>
         </div>
       </div>
 
@@ -157,9 +192,80 @@ export function ResultsPanel({ cls, result, onToggleTarget, onSendToGPA, onSwitc
           );
         })}
 
-        {cls.activeTargets.length === 0 && (
+        {/* Custom target cards */}
+        {result.customTargetResults.map((ctr) => {
+          const { targetPercentage, status, requiredAverage, maxAchievable } = ctr;
+          const cardColor =
+            status === 'already_achieved'
+              ? 'border-[var(--success)] bg-[var(--success-muted)]'
+              : status === 'impossible' || status === 'no_remaining_work'
+              ? 'border-[var(--danger)] bg-[var(--danger-muted)]'
+              : 'border-[var(--accent)] bg-[var(--accent-muted)]';
+
+          return (
+            <div key={targetPercentage} className={`rounded-[8px] border p-3 ${cardColor}`}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5">
+                  {status === 'already_achieved' && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-[var(--success)]">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                  {(status === 'impossible' || status === 'no_remaining_work') && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-[var(--danger)]">
+                      <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                  )}
+                  <span className="text-[12px] font-semibold text-[var(--text-primary)]">
+                    {targetPercentage}%
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemoveCustomTarget(targetPercentage)}
+                  className="text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-colors leading-none"
+                  aria-label="Remove target"
+                >
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+
+              {status === 'already_achieved' && (
+                <p className="text-[12px] text-[var(--success)]">
+                  Already secured — even scoring 0 on everything left.
+                </p>
+              )}
+              {status === 'no_remaining_work' && (
+                <p className="text-[12px] text-[var(--danger)]">
+                  No remaining work — grade is locked.
+                </p>
+              )}
+              {status === 'impossible' && (
+                <div>
+                  <p className="text-[12px] text-[var(--danger)] font-medium">Not achievable.</p>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    You'd need {requiredAverage !== null ? `${requiredAverage.toFixed(0)}%` : '—'} on remaining work.
+                    Best possible: {maxAchievable.toFixed(1)}%.
+                  </p>
+                </div>
+              )}
+              {status === 'achievable' && requiredAverage !== null && (
+                <div>
+                  <p className="text-[13px] font-semibold text-[var(--text-primary)] tabular-nums">
+                    Need {requiredAverage.toFixed(1)}% avg
+                  </p>
+                  <p className="text-[11px] text-[var(--text-tertiary)]">on remaining work</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {cls.activeTargets.length === 0 && (cls.customTargets ?? []).length === 0 && (
           <p className="text-[12px] text-[var(--text-tertiary)] text-center py-4">
-            Select at least one target above.
+            Select a target above or enter a custom %.
           </p>
         )}
       </div>

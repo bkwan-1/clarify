@@ -32,6 +32,8 @@ export function GradeRecoveryPage({ onSwitchTool, onHandoff }: GradeRecoveryPage
     updateRemainingAssignment,
     deleteRemainingAssignment,
     setActiveTargets,
+    addCustomTarget,
+    removeCustomTarget,
   } = useGradeRecovery();
 
   const [showNewClassModal, setShowNewClassModal] = useState(false);
@@ -98,6 +100,8 @@ export function GradeRecoveryPage({ onSwitchTool, onHandoff }: GradeRecoveryPage
       onToggleTarget={handleToggleTarget}
       onSendToGPA={handleSendToGPA}
       onSwitchTool={onSwitchTool}
+      onAddCustomTarget={(pct) => addCustomTarget(activeClass.id, pct)}
+      onRemoveCustomTarget={(pct) => removeCustomTarget(activeClass.id, pct)}
     />
   ) : null;
 
@@ -167,6 +171,8 @@ export function GradeRecoveryPage({ onSwitchTool, onHandoff }: GradeRecoveryPage
               onToggleTarget={handleToggleTarget}
               onSendToGPA={handleSendToGPA}
               onSwitchTool={onSwitchTool}
+              onAddCustomTarget={(pct) => addCustomTarget(activeClass.id, pct)}
+              onRemoveCustomTarget={(pct) => removeCustomTarget(activeClass.id, pct)}
             />
           </BottomDrawer>
         </div>
