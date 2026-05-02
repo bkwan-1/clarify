@@ -6,9 +6,10 @@ import { computeCategoryCurrentPercentage } from '../../lib/gradeRecoveryCalcula
 interface CategoryBlockProps {
   category: GradeCategory;
   mode: 'completed' | 'remaining';
+  /** Called when adding a grade. Pass earned/total for quick-add; omit for a blank row. */
+  onAddAssignment: (earned?: number, total?: number) => void;
   onUpdateAssignment: (assignmentId: string, patch: Partial<GradeCategory['completedAssignments'][0]>) => void;
   onDeleteAssignment: (assignmentId: string) => void;
-  onAddAssignment: () => void;
   onUpdateRemaining?: (assignmentId: string, patch: Partial<RemainingAssignment>) => void;
   onDeleteRemaining?: (assignmentId: string) => void;
   onAddRemaining?: () => void;
@@ -18,15 +19,16 @@ interface CategoryBlockProps {
 export function CategoryBlock({
   category,
   mode,
+  onAddAssignment,
   onUpdateAssignment,
   onDeleteAssignment,
-  onAddAssignment,
   onUpdateRemaining,
   onDeleteRemaining,
   onAddRemaining,
   onUpdateCategory,
 }: CategoryBlockProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [quickInput, setQuickInput] = useState('');
   const { pct } = computeCategoryCurrentPercentage(category);
 
   const pctColor =
@@ -40,8 +42,19 @@ export function CategoryBlock({
       ? 'text-[var(--warning)]'
       : 'text-[var(--danger)]';
 
+  function handleQuickAdd() {
+    // Accept comma- or space-separated numbers: "88, 92, 76" or "88 92 76"
+    const tokens = quickInput.split(/[\s,;]+/).filter(Boolean);
+    const grades = tokens
+      .map((v) => parseFloat(v))
+      .filter((n) => !isNaN(n) && n >= 0);
+    if (grades.length === 0) return;
+    grades.forEach((earned) => onAddAssignment(earned, 100));
+    setQuickInput('');
+  }
+
   return (
-    <div className="mb-4 last:mb-0">
+    <div className="mb-5 last:mb-0">
       {/* Category header */}
       <div className="flex items-center gap-2 mb-2">
         <button
@@ -64,92 +77,122 @@ export function CategoryBlock({
           />
         </button>
 
-        <span className="text-[11px] text-[var(--text-tertiary)]">
+        <span className="text-[11px] text-[var(--text-tertiary)] flex items-center gap-0.5">
           <input
             type="number"
             value={category.weight}
             onChange={(e) => onUpdateCategory({ weight: parseFloat(e.target.value) || 0 })}
             min={0}
             max={200}
-            className="w-8 text-right bg-transparent outline-none text-[var(--text-tertiary)] tabular-nums"
+            className="w-9 text-right bg-transparent outline-none text-[var(--text-tertiary)] tabular-nums hover:bg-[var(--bg-raised)] focus:bg-[var(--bg-raised)] rounded-[3px] px-0.5"
           />
           %
         </span>
 
         {mode === 'completed' && pct !== null && (
-          <span className={`ml-auto text-[12px] font-medium tabular-nums ${pctColor}`}>
+          <span className={`ml-auto text-[12px] font-semibold tabular-nums ${pctColor}`}>
             {pct.toFixed(1)}%
           </span>
         )}
         {mode === 'remaining' && (
           <span className="ml-auto text-[11px] text-[var(--text-tertiary)]">
-            {category.remainingAssignments.length} remaining
+            {category.remainingAssignments.length}{' '}
+            {category.remainingAssignments.length === 1 ? 'item' : 'items'}
           </span>
         )}
       </div>
 
       {!collapsed && (
         <div className="pl-4">
+          {/* ── Completed mode ─────────────────────────────── */}
           {mode === 'completed' && (
             <>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="text-left py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2">Assignment</th>
-                    <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-1 w-16">Score</th>
-                    <th className="w-4" />
-                    <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2 w-16">Out of</th>
-                    <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] w-14">%</th>
-                    <th className="w-6" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {category.completedAssignments.map((a) => (
-                    <AssignmentRow
-                      key={a.id}
-                      assignment={a}
-                      onUpdate={(patch) => onUpdateAssignment(a.id, patch)}
-                      onDelete={() => onDeleteAssignment(a.id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              {/* Quick-paste input */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <input
+                  type="text"
+                  value={quickInput}
+                  onChange={(e) => setQuickInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+                  placeholder="Paste grades: 88, 92, 76"
+                  className="flex-1 min-w-0 px-2 py-1 rounded-[5px] border border-[var(--border)] bg-[var(--bg-raised)] text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--accent)] transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={handleQuickAdd}
+                  disabled={quickInput.trim() === ''}
+                  className="px-2 py-1 rounded-[5px] border border-[var(--border)] text-[11px] font-medium text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+
+              {/* Grades table */}
+              {category.completedAssignments.length > 0 && (
+                <table className="w-full mb-2">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="text-left py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2">Assignment</th>
+                      <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-1 w-16">Score</th>
+                      <th className="w-4" />
+                      <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2 w-16">Out of</th>
+                      <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] w-14">%</th>
+                      <th className="w-6" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {category.completedAssignments.map((a) => (
+                      <AssignmentRow
+                        key={a.id}
+                        assignment={a}
+                        onUpdate={(patch) => onUpdateAssignment(a.id, patch)}
+                        onDelete={() => onDeleteAssignment(a.id)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
               <button
                 type="button"
-                onClick={onAddAssignment}
-                className="mt-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
+                onClick={() => onAddAssignment()}
+                className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
               >
                 + Add grade
               </button>
             </>
           )}
 
+          {/* ── Upcoming mode ──────────────────────────────── */}
           {mode === 'remaining' && (
             <>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="text-left py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2">Assignment</th>
-                    <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2 w-20">Points</th>
-                    <th className="text-center py-1 text-[11px] font-medium text-[var(--text-tertiary)] w-16">EC?</th>
-                    <th className="w-6" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {category.remainingAssignments.map((r) => (
-                    <RemainingRow
-                      key={r.id}
-                      assignment={r}
-                      onUpdate={(patch) => onUpdateRemaining?.(r.id, patch)}
-                      onDelete={() => onDeleteRemaining?.(r.id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              {category.remainingAssignments.length > 0 && (
+                <table className="w-full mb-2">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="text-left py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2">Assignment</th>
+                      <th className="text-right py-1 text-[11px] font-medium text-[var(--text-tertiary)] pr-2 w-20">Points</th>
+                      <th className="text-center py-1 text-[11px] font-medium text-[var(--text-tertiary)] w-16">EC?</th>
+                      <th className="w-6" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {category.remainingAssignments.map((r) => (
+                      <RemainingRow
+                        key={r.id}
+                        assignment={r}
+                        onUpdate={(patch) => onUpdateRemaining?.(r.id, patch)}
+                        onDelete={() => onDeleteRemaining?.(r.id)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
               <button
                 type="button"
                 onClick={onAddRemaining}
-                className="mt-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
+                className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
               >
                 + Add upcoming
               </button>
@@ -161,6 +204,10 @@ export function CategoryBlock({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Remaining assignment row (internal)
+// ---------------------------------------------------------------------------
+
 function RemainingRow({
   assignment,
   onUpdate,
@@ -171,6 +218,7 @@ function RemainingRow({
   onDelete: () => void;
 }) {
   const [hovering, setHovering] = useState(false);
+
   return (
     <tr
       onMouseEnter={() => setHovering(true)}
@@ -205,7 +253,11 @@ function RemainingRow({
       </td>
       <td className="py-1.5 pl-2 w-6">
         {hovering && (
-          <button type="button" onClick={onDelete} className="w-5 h-5 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--danger)]">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="w-5 h-5 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-colors"
+          >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>

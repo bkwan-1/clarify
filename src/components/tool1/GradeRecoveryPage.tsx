@@ -150,8 +150,10 @@ export function GradeRecoveryPage({ onSwitchTool, onHandoff }: GradeRecoveryPage
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {mainContent}
-        {/* Desktop results panel */}
-        <div className="hidden lg:flex">{resultsContent}</div>
+        {/* Desktop results panel — border + fixed width live here so mobile drawer is clean */}
+        <div className="hidden lg:flex w-[280px] shrink-0 border-l border-[var(--border)]">
+          {resultsContent}
+        </div>
       </div>
 
       {/* Mobile results drawer */}
@@ -208,10 +210,13 @@ function ClassDetailContent({
 }) {
   const [activeTab, setActiveTab] = useState<'completed' | 'remaining'>('completed');
 
+  const weightSum = cls.categories.reduce((s, c) => s + c.weight, 0);
+  const weightOk = cls.structure !== 'weighted' || Math.abs(weightSum - 100) < 0.5;
+
   return (
     <div className="flex flex-col gap-0 w-full">
       {/* Class header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4">
         <input
           type="text"
           value={cls.name}
@@ -220,6 +225,29 @@ function ClassDetailContent({
         />
         <span className="text-[12px] text-[var(--text-tertiary)] capitalize">{cls.structure}</span>
       </div>
+
+      {/* Live weight total — only shown for weighted classes */}
+      {cls.structure === 'weighted' && (
+        <div className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-[6px] mb-4 w-fit transition-colors ${
+          weightOk
+            ? 'bg-[var(--success-muted)] text-[var(--success)]'
+            : 'bg-[var(--warning-muted)] text-[var(--warning)]'
+        }`}>
+          {weightOk ? (
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M6 2v5M6 9h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          )}
+          <span>
+            Weights: {weightSum.toFixed(weightSum % 1 === 0 ? 0 : 1)}%
+            {!weightOk && <span className="opacity-70"> — auto-normalizing to 100%</span>}
+          </span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-[var(--border)] mb-5">
@@ -251,7 +279,7 @@ function ClassDetailContent({
             mode={activeTab}
             onUpdateAssignment={(aId, patch) => onUpdateAssignment(cls.id, cat.id, aId, patch)}
             onDeleteAssignment={(aId) => onDeleteAssignment(cls.id, cat.id, aId)}
-            onAddAssignment={() => onAddAssignment(cls.id, cat.id, undefined, 100)}
+            onAddAssignment={(earned, total) => onAddAssignment(cls.id, cat.id, earned, total ?? 100)}
             onUpdateRemaining={(rId, patch) => onUpdateRemaining(cls.id, cat.id, rId, patch)}
             onDeleteRemaining={(rId) => onDeleteRemaining(cls.id, cat.id, rId)}
             onAddRemaining={() => onAddRemaining(cls.id, cat.id, 100)}
