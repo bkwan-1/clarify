@@ -1,14 +1,12 @@
 import { GPAProgressBar } from './GPAProgressBar';
 import { roundGPA, gpaColor } from '../../lib/gpaCalculator';
+import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 
 interface GPASummaryBarProps {
-  // Live (scenario-adjusted when scenarioMode=true) GPAs
   weightedGPA: number | null;
   unweightedGPA: number | null;
-  // Pre-scenario "actual" GPAs — only meaningful when scenarioMode=true
   actualWeightedGPA?: number | null;
   actualUnweightedGPA?: number | null;
-  // Best-case GPA (all in-progress courses → A) — only shown in scenario mode
   bestCaseGPA?: number | null;
   totalCredits: number;
   semesterCount: number;
@@ -19,7 +17,7 @@ interface GPASummaryBarProps {
 }
 
 // ---------------------------------------------------------------------------
-// Single GPA number block
+// Animated GPA block
 // ---------------------------------------------------------------------------
 
 function GPABlock({
@@ -35,12 +33,12 @@ function GPABlock({
   scenarioMode: boolean;
   large?: boolean;
 }) {
-  const rounded = roundGPA(gpa);
+  // Smooth count-up/down when GPA changes
+  const animated = useAnimatedNumber(gpa, 380);
+  const rounded = roundGPA(animated);
   const roundedActual = roundGPA(actualGPA ?? null);
   const delta =
-    scenarioMode && rounded !== null && roundedActual !== null
-      ? rounded - roundedActual
-      : null;
+    scenarioMode && rounded !== null && roundedActual !== null ? rounded - roundedActual : null;
   const changed = delta !== null && Math.abs(delta) >= 0.005;
 
   return (
@@ -55,7 +53,6 @@ function GPABlock({
           {rounded !== null ? rounded.toFixed(2) : '—'}
         </span>
 
-        {/* Show "was X.XX / +delta" only when the grade actually changed */}
         {scenarioMode && roundedActual !== null && changed && (
           <div className="flex flex-col leading-none gap-0.5">
             <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
@@ -66,8 +63,7 @@ function GPABlock({
                 delta! > 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'
               }`}
             >
-              {delta! > 0 ? '+' : ''}
-              {delta!.toFixed(2)}
+              {delta! > 0 ? '+' : ''}{delta!.toFixed(2)}
             </span>
           </div>
         )}
@@ -96,8 +92,6 @@ export function GPASummaryBar({
   return (
     <div className="border-b border-[var(--border)] px-5 py-4 bg-[var(--bg-surface)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
-
-        {/* Both GPAs side by side */}
         <div className="flex flex-wrap items-end gap-6">
           <GPABlock
             label="Weighted GPA"
@@ -106,15 +100,12 @@ export function GPASummaryBar({
             scenarioMode={scenarioMode}
             large
           />
-
           <GPABlock
             label="Unweighted"
             gpa={unweightedGPA}
             actualGPA={scenarioMode ? actualUnweightedGPA : null}
             scenarioMode={scenarioMode}
           />
-
-          {/* Stats */}
           <div className="text-[12px] text-[var(--text-secondary)] space-y-0.5 pb-1">
             <div>
               <span className="text-[var(--text-tertiary)]">Credits: </span>
@@ -127,7 +118,6 @@ export function GPASummaryBar({
           </div>
         </div>
 
-        {/* Scenario controls */}
         <div className="flex items-center gap-2 pb-1 self-end flex-wrap">
           {scenarioMode && (
             <>
@@ -156,23 +146,17 @@ export function GPASummaryBar({
                 : 'border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
             }`}
           >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                scenarioMode ? 'bg-white' : 'bg-[var(--text-tertiary)]'
-              }`}
-            />
+            <span className={`w-1.5 h-1.5 rounded-full ${scenarioMode ? 'bg-white' : 'bg-[var(--text-tertiary)]'}`} />
             Scenario {scenarioMode ? 'ON' : 'OFF'}
           </button>
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="mt-4 hidden sm:block">
         <GPAProgressBar gpa={roundGPA(weightedGPA)} />
         <div className="mt-3" />
       </div>
 
-      {/* Best-case note (scenario mode only) */}
       {scenarioMode && bestCaseGPA !== null && bestCaseGPA !== undefined && (
         <p className="text-[11px] text-[var(--text-tertiary)] mt-1">
           Best case (all in-progress → A):{' '}

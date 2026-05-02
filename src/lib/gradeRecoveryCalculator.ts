@@ -172,8 +172,8 @@ function computeTargetResult(
   });
 
   if (remainingCoefficient === 0) {
-    // No remaining work anywhere
-    const currentTotal = numeratorConstant * 100;
+    // No remaining work anywhere — grade is locked at whatever was completed
+    const currentTotal = numeratorConstant; // in percentage-point units (same scale as targetPercentage)
     if (currentTotal >= targetPercentage) {
       status = 'already_achieved';
     } else {
@@ -189,10 +189,13 @@ function computeTargetResult(
     };
   }
 
-  const R = ((targetPercentage / 100 - numeratorConstant) / remainingCoefficient) * 100;
+  // C and K are in percentage-point units (weights sum to 100, ratios in [0,1])
+  // so the equation is: finalGrade% = C + K × (R/100)
+  // solving for R: R = (targetPercentage - C) / K × 100
+  const R = ((targetPercentage - numeratorConstant) / remainingCoefficient) * 100;
   requiredAverage = R;
 
-  const maxAchievable = (numeratorConstant + remainingCoefficient) * 100; // at 100%
+  const maxAchievable = numeratorConstant + remainingCoefficient; // grade if R=100%
 
   if (R < 0) {
     status = 'already_achieved';
@@ -219,7 +222,7 @@ function computeCustomTargetResult(
   const { numeratorConstant, remainingCoefficient } = coeff;
 
   if (remainingCoefficient === 0) {
-    const currentTotal = numeratorConstant * 100;
+    const currentTotal = numeratorConstant; // percentage-point units
     return {
       targetPercentage,
       requiredAverage: null,
@@ -228,8 +231,8 @@ function computeCustomTargetResult(
     };
   }
 
-  const R = ((targetPercentage / 100 - numeratorConstant) / remainingCoefficient) * 100;
-  const maxAchievable = (numeratorConstant + remainingCoefficient) * 100;
+  const R = ((targetPercentage - numeratorConstant) / remainingCoefficient) * 100;
+  const maxAchievable = numeratorConstant + remainingCoefficient;
 
   return {
     targetPercentage,
@@ -287,5 +290,5 @@ export function computeRequiredForTarget(
   targetPercentage: number,
 ): number | null {
   if (remainingCoefficient === 0) return null;
-  return ((targetPercentage / 100 - numeratorConstant) / remainingCoefficient) * 100;
+  return ((targetPercentage - numeratorConstant) / remainingCoefficient) * 100;
 }

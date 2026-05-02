@@ -77,3 +77,35 @@ input[type=number] { -moz-appearance: textfield; }
 }
 
 .pulse-accent { animation: pulse-accent 0.8s ease-in-out 2; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fade-in 0.18s ease-out both; }
+
+/* Checkmark path draw-on animation — triggered when .check-animate-path class is present */
+@keyframes check-draw {
+  from { stroke-dashoffset: 14; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.check-animate-path {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: check-draw 0.3s ease-out 0.05s both;
+}
+
+/* Delete buttons: opacity-0 by default (hover reveals on mouse), always visible on touch */
+@media (hover: none) and (pointer: coarse) {
+  .delete-btn { opacity: 1 !important; }
+}
+
+/* Ensure minimum tap target size on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .delete-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}

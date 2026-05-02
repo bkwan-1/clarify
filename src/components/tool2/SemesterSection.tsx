@@ -147,9 +147,9 @@ export function SemesterSection({
                   </th>
                 )}
                 <th className="text-right py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-16">Credits</th>
-                <th className="text-right py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-14">QP</th>
-                <th className="text-center py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-12">Wt.</th>
-                <th className="w-6" />
+                <th className="hidden sm:table-cell text-right py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-14">QP</th>
+                <th className="hidden sm:table-cell text-center py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-12">Wt.</th>
+                <th className="hidden sm:table-cell w-6" />
                 <th className="w-6" />
               </tr>
             </thead>

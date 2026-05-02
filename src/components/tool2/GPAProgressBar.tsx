@@ -15,7 +15,12 @@ export function GPAProgressBar({ gpa, min = 0, max = 4.0 }: GPAProgressBarProps)
       <div className="absolute inset-0 rounded-full bg-[var(--bg-raised)] overflow-hidden">
         {gpa !== null && (
           <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all duration-300"
+            className={`h-full rounded-full transition-all duration-500 ${
+              gpa >= 3.5 ? 'bg-[var(--success)]'
+              : gpa >= 3.0 ? 'bg-[var(--accent)]'
+              : gpa >= 2.0 ? 'bg-[var(--warning)]'
+              : 'bg-[var(--danger)]'
+            }`}
             style={{ width: `${pct}%` }}
           />
         )}

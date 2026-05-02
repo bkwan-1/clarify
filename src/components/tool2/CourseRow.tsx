@@ -105,13 +105,13 @@ export function CourseRow({
         />
       </td>
 
-      {/* Quality points */}
-      <td className="py-2 px-2 w-14 text-right text-[12px] text-[var(--text-tertiary)] tabular-nums">
+      {/* Quality points — hidden on mobile */}
+      <td className="hidden sm:table-cell py-2 px-2 w-14 text-right text-[12px] text-[var(--text-tertiary)] tabular-nums">
         {qp ?? '—'}
       </td>
 
-      {/* Weight toggle: cycles standard → honors → AP */}
-      <td className="py-2 px-2 w-12 text-center">
+      {/* Weight toggle — hidden on mobile */}
+      <td className="hidden sm:table-cell py-2 px-2 w-12 text-center">
         <button
           type="button"
           onClick={() => {
@@ -139,8 +139,8 @@ export function CourseRow({
         </button>
       </td>
 
-      {/* GPA impact indicator */}
-      <td className="py-2 w-6">
+      {/* GPA impact indicator — hidden on mobile */}
+      <td className="hidden sm:table-cell py-2 w-6">
         {hurtsGPA && gpaWithout !== null && gpaWithout !== undefined && (
           <Tooltip
             content={`Removing this would raise GPA: ${(cumulativeGPA ?? 0).toFixed(2)} → ${gpaWithout.toFixed(2)}`}
@@ -151,19 +151,20 @@ export function CourseRow({
         )}
       </td>
 
-      {/* Delete */}
+      {/* Delete — always rendered; .delete-btn makes it visible on touch */}
       <td className="py-2 pr-2 w-6">
-        {hovering && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="w-5 h-5 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-colors"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Delete course"
+          className={`delete-btn w-5 h-5 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-colors ${
+            hovering ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        </button>
       </td>
     </tr>
   );

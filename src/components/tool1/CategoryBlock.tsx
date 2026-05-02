@@ -153,6 +153,13 @@ export function CategoryBlock({
                 </table>
               )}
 
+              {/* First-time hint — shown only when no grades yet */}
+              {category.completedAssignments.length === 0 && (
+                <p className="text-[11px] text-[var(--text-tertiary)] mt-1 mb-2">
+                  Type a grade and press Enter, or paste multiple: <span className="font-mono">88, 92, 76</span>
+                </p>
+              )}
+
               <button
                 type="button"
                 onClick={() => onAddAssignment()}
