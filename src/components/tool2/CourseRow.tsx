@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CourseEntry } from '../../models/gpa';
 import { gradeColor } from '../../lib/gpaCalculator';
 import { Tooltip } from '../shared/Tooltip';
@@ -22,6 +22,14 @@ function PercentInput({
   placeholder?: string;
 }) {
   const [raw, setRaw] = useState(value !== null ? String(value) : '');
+  const focused = useRef(false);
+
+  // Sync display when the value is changed externally (e.g. Apply as actual)
+  useEffect(() => {
+    if (!focused.current) {
+      setRaw(value !== null ? String(value) : '');
+    }
+  }, [value]);
 
   function commit(str: string) {
     const n = parseFloat(str);
@@ -38,7 +46,9 @@ function PercentInput({
         type="number"
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
+        onFocus={() => { focused.current = true; }}
         onBlur={(e) => {
+          focused.current = false;
           commit(e.target.value);
           const n = parseFloat(e.target.value);
           if (!isNaN(n)) setRaw(String(Math.max(0, Math.min(100, n))));
