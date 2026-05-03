@@ -4,12 +4,11 @@ import { SemesterSection } from './SemesterSection';
 import { ImpactRankingPanel } from './ImpactRankingPanel';
 import { EmptyState } from '../shared/EmptyState';
 import { useGPATracker } from '../../hooks/useGPATracker';
-import type { LetterGrade } from '../../models/gradeRecovery';
 import { semesterNameFromDate, computeCumulativeAverage } from '../../lib/gpaCalculator';
 import type { GPAImpactEntry } from '../../models/gpa';
 
 interface GPATrackerPageProps {
-  pendingHandoff?: { courseName: string; projectedGrade: LetterGrade } | null;
+  pendingHandoff?: { courseName: string; gradePercent: number } | null;
   onHandoffConsumed?: () => void;
 }
 
@@ -72,7 +71,7 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
     if (!pendingHandoff) return;
     const targetId =
       semesters.length === 0 ? addSemester() : semesters[0].id;
-    injectHandoffCourse(targetId, pendingHandoff.courseName, pendingHandoff.projectedGrade);
+    injectHandoffCourse(targetId, pendingHandoff.courseName, pendingHandoff.gradePercent);
     onHandoffConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingHandoff]);

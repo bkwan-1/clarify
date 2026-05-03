@@ -11,7 +11,7 @@ import { useGradeRecovery } from '../../hooks/useGradeRecovery';
 
 interface GradeRecoveryPageProps {
   onSwitchTool: (tool: ActiveTool) => void;
-  onHandoff: (className: string, projectedGrade: LetterGrade) => void;
+  onHandoff: (className: string, gradePercent: number) => void;
 }
 
 export function GradeRecoveryPage({ onSwitchTool, onHandoff }: GradeRecoveryPageProps) {
@@ -46,11 +46,7 @@ export function GradeRecoveryPage({ onSwitchTool, onHandoff }: GradeRecoveryPage
 
   function handleSendToGPA() {
     if (!activeClass || !result) return;
-    const firstActiveTarget = activeClass.activeTargets[0] ?? 'B';
-    const targetResult = result.targetResults[firstActiveTarget];
-    if (targetResult) {
-      onHandoff(activeClass.name, firstActiveTarget);
-    }
+    onHandoff(activeClass.name, result.currentGradePercentage);
   }
 
   function handleToggleTarget(t: LetterGrade) {

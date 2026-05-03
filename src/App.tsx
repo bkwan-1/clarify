@@ -7,12 +7,11 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { GradeRecoveryPage } from './components/tool1/GradeRecoveryPage';
 import { GPATrackerPage } from './components/tool2/GPATrackerPage';
 import { useTheme } from './hooks/useTheme';
-import type { LetterGrade } from './models/gradeRecovery';
 import { readSavedDataSummary } from './lib/savedData';
 
 interface PendingHandoff {
   courseName: string;
-  projectedGrade: LetterGrade;
+  gradePercent: number;
 }
 
 function App() {
@@ -61,8 +60,8 @@ function App() {
     setActiveTool(tool);
   }
 
-  function handleHandoff(className: string, projectedGrade: LetterGrade) {
-    setPendingHandoff({ courseName: className, projectedGrade });
+  function handleHandoff(className: string, gradePercent: number) {
+    setPendingHandoff({ courseName: className, gradePercent });
     setActiveTool('gpa-tracker');
   }
 

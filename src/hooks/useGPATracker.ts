@@ -1,7 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import type { StudentGPARecord, CourseEntry } from '../models/gpa';
-import type { LetterGrade } from '../models/gradeRecovery';
 import { DEFAULT_GRADE_SCALE } from '../models/gradeRecovery';
 import {
   computeCumulativeAverage,
@@ -253,13 +252,13 @@ export function useGPATracker() {
   function injectHandoffCourse(
     semesterId: string,
     courseName: string,
-    projectedGrade: LetterGrade,
+    gradePercent: number,
   ): string {
-    const gradePercent = LETTER_TO_PCT[projectedGrade] ?? null;
+    const pct = Math.max(0, Math.min(100, gradePercent));
     return addCourse(semesterId, {
       name: courseName,
-      gradePercent,
-      scenarioGrade: gradePercent,
+      gradePercent: pct,
+      scenarioGrade: pct,
     });
   }
 
