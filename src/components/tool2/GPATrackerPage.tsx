@@ -8,7 +8,7 @@ import { semesterNameFromDate, computeCumulativeAverage } from '../../lib/gpaCal
 import type { GPAImpactEntry } from '../../models/gpa';
 
 interface GPATrackerPageProps {
-  pendingHandoff?: { courseName: string; gradePercent: number } | null;
+  pendingHandoff?: { courseName: string; gradePercent: number; creditHours: number | null } | null;
   onHandoffConsumed?: () => void;
 }
 
@@ -71,7 +71,7 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
     if (!pendingHandoff) return;
     const targetId =
       semesters.length === 0 ? addSemester() : semesters[0].id;
-    injectHandoffCourse(targetId, pendingHandoff.courseName, pendingHandoff.gradePercent);
+    injectHandoffCourse(targetId, pendingHandoff.courseName, pendingHandoff.gradePercent, pendingHandoff.creditHours);
     onHandoffConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingHandoff]);

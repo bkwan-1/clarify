@@ -12,6 +12,7 @@ import { readSavedDataSummary } from './lib/savedData';
 interface PendingHandoff {
   courseName: string;
   gradePercent: number;
+  creditHours: number | null;
 }
 
 function App() {
@@ -60,8 +61,8 @@ function App() {
     setActiveTool(tool);
   }
 
-  function handleHandoff(className: string, gradePercent: number) {
-    setPendingHandoff({ courseName: className, gradePercent });
+  function handleHandoff(className: string, gradePercent: number, creditHours: number | null) {
+    setPendingHandoff({ courseName: className, gradePercent, creditHours });
     setActiveTool('gpa-tracker');
   }
 

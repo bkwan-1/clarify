@@ -13,7 +13,7 @@ interface ResultsPanelProps {
   cls: GradeRecoveryClass;
   result: GradeRecoveryResult | null;
   onToggleTarget: (t: LetterGrade) => void;
-  onSendToGPA: () => void;
+  onSendToGPA: (creditHours: number | null) => void;
   onSwitchTool: (tool: ActiveTool) => void;
   onAddCustomTarget: (pct: number) => void;
   onRemoveCustomTarget: (pct: number) => void;
@@ -300,6 +300,7 @@ export function ResultsPanel({
 }: ResultsPanelProps) {
   const [customInput, setCustomInput] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [creditsInput, setCreditsInput] = useState('');
 
   // Animate the current grade percentage in the header
   const animatedCurrentPct = useAnimatedNumber(result ? result.currentGradePercentage : null);
@@ -443,12 +444,30 @@ export function ResultsPanel({
 
       {/* ── GPA handoff CTA ──────────────────────────────────────── */}
       <div className="p-4 border-t border-[var(--border)]">
-        <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-widest mb-2">
+        <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-widest mb-3">
           GPA impact
         </p>
+        <div className="flex items-center gap-2 mb-2.5">
+          <label className="text-[12px] text-[var(--text-secondary)] shrink-0">Credits</label>
+          <input
+            type="number"
+            value={creditsInput}
+            onChange={(e) => setCreditsInput(e.target.value)}
+            placeholder="—"
+            min={0.5}
+            max={12}
+            step={0.5}
+            className="w-16 px-2 py-1 rounded-[6px] border border-[var(--border)] bg-[var(--bg-raised)] text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors text-center tabular-nums"
+          />
+          <span className="text-[11px] text-[var(--text-tertiary)]">optional</span>
+        </div>
         <button
           type="button"
-          onClick={() => { onSendToGPA(); onSwitchTool('gpa-tracker'); }}
+          onClick={() => {
+            const cr = parseFloat(creditsInput);
+            onSendToGPA(isNaN(cr) || cr <= 0 ? null : cr);
+            onSwitchTool('gpa-tracker');
+          }}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[6px] border border-[var(--accent)] text-[var(--accent)] text-[12px] font-medium hover:bg-[var(--accent-muted)] transition-colors"
         >
           Add to GPA Tracker

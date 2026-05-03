@@ -253,12 +253,14 @@ export function useGPATracker() {
     semesterId: string,
     courseName: string,
     gradePercent: number,
+    creditHours?: number | null,
   ): string {
     const pct = Math.max(0, Math.min(100, gradePercent));
     return addCourse(semesterId, {
       name: courseName,
       gradePercent: pct,
       scenarioGrade: pct,
+      ...(creditHours != null ? { creditHours } : { creditHours: 0 }),
     });
   }
 
