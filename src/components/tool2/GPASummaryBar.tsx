@@ -1,13 +1,11 @@
 import { GPAProgressBar } from './GPAProgressBar';
-import { roundGPA, gpaColor } from '../../lib/gpaCalculator';
+import { roundGPA, gradeColor } from '../../lib/gpaCalculator';
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 
 interface GPASummaryBarProps {
-  weightedGPA: number | null;
-  unweightedGPA: number | null;
-  actualWeightedGPA?: number | null;
-  actualUnweightedGPA?: number | null;
-  bestCaseGPA?: number | null;
+  averageGrade: number | null;
+  actualAverage?: number | null;
+  bestCaseAverage?: number | null;
   totalCredits: number;
   semesterCount: number;
   scenarioMode: boolean;
@@ -16,54 +14,45 @@ interface GPASummaryBarProps {
   onResetScenarios: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Animated GPA block
-// ---------------------------------------------------------------------------
-
-function GPABlock({
-  label,
-  gpa,
-  actualGPA,
+function AverageBlock({
+  averageGrade,
+  actualAverage,
   scenarioMode,
-  large = false,
 }: {
-  label: string;
-  gpa: number | null;
-  actualGPA?: number | null;
+  averageGrade: number | null;
+  actualAverage?: number | null;
   scenarioMode: boolean;
-  large?: boolean;
 }) {
-  // Smooth count-up/down when GPA changes
-  const animated = useAnimatedNumber(gpa, 380);
+  const animated = useAnimatedNumber(averageGrade, 380);
   const rounded = roundGPA(animated);
-  const roundedActual = roundGPA(actualGPA ?? null);
+  const roundedActual = roundGPA(actualAverage ?? null);
   const delta =
     scenarioMode && rounded !== null && roundedActual !== null ? rounded - roundedActual : null;
-  const changed = delta !== null && Math.abs(delta) >= 0.005;
+  const changed = delta !== null && Math.abs(delta) >= 0.05;
 
   return (
     <div>
       <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-widest mb-1">
-        {label}
+        Grade Average
       </p>
       <div className="flex items-baseline gap-2">
         <span
-          className={`${large ? 'text-[36px]' : 'text-[24px]'} font-semibold tabular-nums leading-none ${gpaColor(rounded)}`}
+          className={`text-[36px] font-semibold tabular-nums leading-none ${gradeColor(rounded)}`}
         >
-          {rounded !== null ? rounded.toFixed(2) : '—'}
+          {rounded !== null ? `${rounded.toFixed(1)}%` : '—'}
         </span>
 
         {scenarioMode && roundedActual !== null && changed && (
           <div className="flex flex-col leading-none gap-0.5">
             <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
-              was {roundedActual.toFixed(2)}
+              was {roundedActual.toFixed(1)}%
             </span>
             <span
               className={`text-[11px] font-semibold tabular-nums ${
                 delta! > 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'
               }`}
             >
-              {delta! > 0 ? '+' : ''}{delta!.toFixed(2)}
+              {delta! > 0 ? '+' : ''}{delta!.toFixed(1)}%
             </span>
           </div>
         )}
@@ -72,16 +61,10 @@ function GPABlock({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main bar
-// ---------------------------------------------------------------------------
-
 export function GPASummaryBar({
-  weightedGPA,
-  unweightedGPA,
-  actualWeightedGPA,
-  actualUnweightedGPA,
-  bestCaseGPA,
+  averageGrade,
+  actualAverage,
+  bestCaseAverage,
   totalCredits,
   semesterCount,
   scenarioMode,
@@ -93,17 +76,9 @@ export function GPASummaryBar({
     <div className="border-b border-[var(--border)] px-5 py-4 bg-[var(--bg-surface)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-wrap items-end gap-6">
-          <GPABlock
-            label="Weighted GPA"
-            gpa={weightedGPA}
-            actualGPA={scenarioMode ? actualWeightedGPA : null}
-            scenarioMode={scenarioMode}
-            large
-          />
-          <GPABlock
-            label="Unweighted"
-            gpa={unweightedGPA}
-            actualGPA={scenarioMode ? actualUnweightedGPA : null}
+          <AverageBlock
+            averageGrade={averageGrade}
+            actualAverage={scenarioMode ? actualAverage : null}
             scenarioMode={scenarioMode}
           />
           <div className="text-[12px] text-[var(--text-secondary)] space-y-0.5 pb-1">
@@ -153,17 +128,16 @@ export function GPASummaryBar({
       </div>
 
       <div className="mt-4 hidden sm:block">
-        <GPAProgressBar gpa={roundGPA(weightedGPA)} />
+        <GPAProgressBar average={roundGPA(averageGrade)} />
         <div className="mt-3" />
       </div>
 
-      {scenarioMode && bestCaseGPA !== null && bestCaseGPA !== undefined && (
+      {scenarioMode && bestCaseAverage !== null && bestCaseAverage !== undefined && (
         <p className="text-[11px] text-[var(--text-tertiary)] mt-1">
-          Best case (all in-progress → A):{' '}
-          <span className={`font-semibold tabular-nums ${gpaColor(roundGPA(bestCaseGPA))}`}>
-            {roundGPA(bestCaseGPA)?.toFixed(2)}
-          </span>{' '}
-          weighted
+          Best case (all in-progress → 100%):{' '}
+          <span className={`font-semibold tabular-nums ${gradeColor(roundGPA(bestCaseAverage))}`}>
+            {roundGPA(bestCaseAverage)?.toFixed(1)}%
+          </span>
         </p>
       )}
     </div>

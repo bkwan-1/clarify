@@ -1,12 +1,11 @@
 import type { LetterGrade } from '../models/gradeRecovery';
 import { percentageToLetterGrade } from './gradeRecoveryCalculator';
-import type { CourseEntry, CourseWeight } from '../models/gpa';
+import type { CourseEntry } from '../models/gpa';
 import type { GradeRecoveryClass } from '../models/gradeRecovery';
 
 export interface GradeRecoveryToGPAHandoff {
   sourceClassId: string;
   sourceClassName: string;
-  courseWeight: CourseWeight;
   currentLetterGrade: LetterGrade;
   projectedLetterGrade: LetterGrade;
   projectedPercentage: number;
@@ -25,7 +24,6 @@ export function buildHandoff(
   return {
     sourceClassId: cls.id,
     sourceClassName: cls.name,
-    courseWeight: 'standard',
     currentLetterGrade,
     projectedLetterGrade,
     projectedPercentage: targetPercentage,
@@ -37,10 +35,9 @@ export function buildHandoff(
 export function handoffToCourseEntry(handoff: GradeRecoveryToGPAHandoff): Partial<CourseEntry> {
   return {
     name: handoff.sourceClassName,
-    courseWeight: handoff.courseWeight,
-    scenarioGrade: handoff.projectedLetterGrade,
-    letterGrade: null,
+    gradePercent: null,
+    scenarioGrade: handoff.projectedPercentage,
     isIncludedInGPA: true,
-    creditHours: 3, // default; user will update
+    creditHours: 3,
   };
 }

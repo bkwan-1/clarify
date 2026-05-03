@@ -1,62 +1,52 @@
-import type { GPAImpactEntry, Semester, CourseWeight } from '../../models/gpa';
-import { computeWeightedGradePoints, roundGPA } from '../../lib/gpaCalculator';
+import type { GPAImpactEntry, Semester } from '../../models/gpa';
+import { roundGPA, gradeColor } from '../../lib/gpaCalculator';
 
 interface ImpactRankingPanelProps {
   ranking: GPAImpactEntry[];
   semesters: Semester[];
-  currentGPA: number | null;
+  currentAverage: number | null;
   totalCredits: number;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-type CourseInfo = { creditHours: number; courseWeight: CourseWeight };
-
-function buildCourseMap(semesters: Semester[]): Map<string, CourseInfo> {
-  const map = new Map<string, CourseInfo>();
+function buildCreditMap(semesters: Semester[]): Map<string, number> {
+  const map = new Map<string, number>();
   for (const sem of semesters) {
     for (const c of sem.courses) {
-      map.set(c.id, { creditHours: c.creditHours, courseWeight: c.courseWeight });
+      map.set(c.id, c.creditHours);
     }
   }
   return map;
 }
 
-function gpaIfGrade(
+// What would the average be if this course got 100%?
+function avgIf100(
   entry: GPAImpactEntry,
-  gradePoints: number,
+  creditHours: number,
   totalCredits: number,
-  course: CourseInfo,
 ): number | null {
   if (totalCredits === 0) return null;
-  const qpWithout = entry.gpaWithoutThisCourse * (totalCredits - course.creditHours);
-  return (qpWithout + gradePoints * course.creditHours) / totalCredits;
+  const remainingCr = totalCredits - creditHours;
+  const wpWithout = entry.averageWithoutThisCourse * remainingCr;
+  return (wpWithout + 100 * creditHours) / totalCredits;
 }
-
-// ---------------------------------------------------------------------------
-// Row sub-component
-// ---------------------------------------------------------------------------
 
 function ImpactRow({
   entry,
   rank,
-  course,
-  currentGPA,
+  creditHours,
+  currentAverage,
   totalCredits,
   variant,
 }: {
   entry: GPAImpactEntry;
   rank: number;
-  course: CourseInfo;
-  currentGPA: number;
+  creditHours: number;
+  currentAverage: number;
   totalCredits: number;
   variant: 'dragging' | 'helping';
 }) {
-  const gpIfA = computeWeightedGradePoints('A', course.courseWeight);
-  const newGPA = gpaIfGrade(entry, gpIfA, totalCredits, course);
-  const deltaIfA = newGPA !== null ? newGPA - currentGPA : null;
+  const newAvg = avgIf100(entry, creditHours, totalCredits);
+  const deltaIf100 = newAvg !== null ? newAvg - currentAverage : null;
 
   return (
     <div className="flex items-start gap-2.5 py-2 border-b border-[var(--border-subtle)] last:border-0">
@@ -69,23 +59,21 @@ function ImpactRow({
             {entry.courseName || 'Unnamed course'}
           </span>
           <span
-            className={`text-[11px] font-semibold shrink-0 tabular-nums ${
-              variant === 'dragging' ? 'text-[var(--danger)]' : 'text-[var(--success)]'
-            }`}
+            className={`text-[11px] font-semibold shrink-0 tabular-nums ${gradeColor(entry.currentGrade)}`}
           >
-            {entry.currentGrade}
+            {entry.currentGrade.toFixed(1)}%
           </span>
         </div>
         <div className="flex items-center justify-between gap-1">
           <span className="text-[10px] text-[var(--text-tertiary)]">{entry.semesterName}</span>
-          {deltaIfA !== null && variant === 'dragging' && (
+          {deltaIf100 !== null && variant === 'dragging' && (
             <span className="text-[10px] font-medium text-[var(--success)] tabular-nums">
-              +{roundGPA(deltaIfA, 2)?.toFixed(2)} if A
+              +{roundGPA(deltaIf100, 1)?.toFixed(1)}% if 100
             </span>
           )}
           {variant === 'helping' && (
             <span className="text-[10px] text-[var(--text-tertiary)] tabular-nums">
-              +{Math.abs(entry.gpaImpactDelta).toFixed(2)} above avg
+              +{Math.abs(entry.averageImpactDelta).toFixed(1)}% above avg
             </span>
           )}
         </div>
@@ -94,31 +82,25 @@ function ImpactRow({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main panel
-// ---------------------------------------------------------------------------
-
 export function ImpactRankingPanel({
   ranking,
   semesters,
-  currentGPA,
+  currentAverage,
   totalCredits,
 }: ImpactRankingPanelProps) {
-  const courseMap = buildCourseMap(semesters);
+  const creditMap = buildCreditMap(semesters);
 
-  // Courses with negative delta drag the GPA down (sorted worst-first already)
-  const dragging = ranking.filter((e) => e.gpaImpactDelta < -0.005);
-  // Courses with positive delta are propping it up; reverse to show best helpers first
-  const helping = [...ranking].reverse().filter((e) => e.gpaImpactDelta > 0.005);
+  const dragging = ranking.filter((e) => e.averageImpactDelta < -0.05);
+  const helping = [...ranking].reverse().filter((e) => e.averageImpactDelta > 0.05);
 
-  const isEmpty = currentGPA === null || ranking.length === 0;
+  const isEmpty = currentAverage === null || ranking.length === 0;
 
   return (
     <aside className="flex flex-col h-full overflow-y-auto w-full">
       {/* Header */}
       <div className="p-4 border-b border-[var(--border)]">
         <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-widest mb-1">
-          GPA Impact
+          Grade Impact
         </p>
         <p className="text-[11px] text-[var(--text-secondary)]">Where to focus your effort</p>
       </div>
@@ -126,7 +108,7 @@ export function ImpactRankingPanel({
       {isEmpty ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <p className="text-[12px] text-[var(--text-tertiary)] text-center">
-            Add courses with grades to see their impact on your GPA.
+            Add courses with grades to see their impact on your average.
           </p>
         </div>
       ) : (
@@ -141,7 +123,7 @@ export function ImpactRankingPanel({
                     <path d="M5 1v8M2 6l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   <p className="text-[10px] font-semibold text-[var(--danger)] uppercase tracking-wider">
-                    Dragging GPA down
+                    Dragging average down
                   </p>
                 </>
               ) : (
@@ -159,15 +141,15 @@ export function ImpactRankingPanel({
             {dragging.length > 0 ? (
               <div>
                 {dragging.slice(0, 6).map((entry, i) => {
-                  const course = courseMap.get(entry.courseId);
-                  if (!course || currentGPA === null) return null;
+                  const credits = creditMap.get(entry.courseId);
+                  if (credits === undefined || currentAverage === null) return null;
                   return (
                     <ImpactRow
                       key={entry.courseId}
                       entry={entry}
                       rank={i + 1}
-                      course={course}
-                      currentGPA={currentGPA}
+                      creditHours={credits}
+                      currentAverage={currentAverage}
                       totalCredits={totalCredits}
                       variant="dragging"
                     />
@@ -176,7 +158,7 @@ export function ImpactRankingPanel({
               </div>
             ) : (
               <p className="text-[11px] text-[var(--text-secondary)]">
-                Every course is helping your GPA. Nice work.
+                Every course is helping your average. Nice work.
               </p>
             )}
           </div>
@@ -189,20 +171,20 @@ export function ImpactRankingPanel({
                   <path d="M5 9V1M2 4l3-3 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <p className="text-[10px] font-semibold text-[var(--success)] uppercase tracking-wider">
-                  Propping GPA up
+                  Propping average up
                 </p>
               </div>
               <div>
                 {helping.slice(0, 4).map((entry, i) => {
-                  const course = courseMap.get(entry.courseId);
-                  if (!course || currentGPA === null) return null;
+                  const credits = creditMap.get(entry.courseId);
+                  if (credits === undefined || currentAverage === null) return null;
                   return (
                     <ImpactRow
                       key={entry.courseId}
                       entry={entry}
                       rank={i + 1}
-                      course={course}
-                      currentGPA={currentGPA}
+                      creditHours={credits}
+                      currentAverage={currentAverage}
                       totalCredits={totalCredits}
                       variant="helping"
                     />

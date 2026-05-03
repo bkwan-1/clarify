@@ -1,31 +1,35 @@
 import { useState } from 'react';
-import type { LetterGrade } from '../../models/gradeRecovery';
-import { GradeDropdown } from '../shared/GradeDropdown';
+import { gradeColor } from '../../lib/gpaCalculator';
 
 interface AddCourseRowProps {
-  onAdd: (name: string, grade: LetterGrade | null, credits: number, weighted: boolean) => void;
+  onAdd: (name: string, grade: number | null, credits: number) => void;
   onCancel: () => void;
-  colSpan?: number;
   scenarioMode?: boolean;
 }
 
 export function AddCourseRow({ onAdd, onCancel, scenarioMode }: AddCourseRowProps) {
   const [name, setName] = useState('');
-  const [grade, setGrade] = useState<LetterGrade | null>(null);
+  const [gradeRaw, setGradeRaw] = useState('');
   const [credits, setCredits] = useState(3);
-  const [weighted, setWeighted] = useState(false);
+
+  function parsedGrade(): number | null {
+    const n = parseFloat(gradeRaw);
+    if (isNaN(n)) return null;
+    return Math.max(0, Math.min(100, n));
+  }
 
   function handleConfirm() {
-    onAdd(name.trim(), grade, credits, weighted);
+    onAdd(name.trim(), parsedGrade(), credits);
     setName('');
-    setGrade(null);
+    setGradeRaw('');
     setCredits(3);
-    setWeighted(false);
   }
+
+  const grade = parsedGrade();
 
   return (
     <tr className="border-b border-[var(--border-subtle)] bg-[var(--accent-muted)]">
-      <td className="py-2 pr-3">
+      <td className="py-2 px-4 pr-3">
         <input
           type="text"
           value={name}
@@ -39,11 +43,29 @@ export function AddCourseRow({ onAdd, onCancel, scenarioMode }: AddCourseRowProp
           className="w-full bg-transparent text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
         />
       </td>
-      <td className="py-2 pr-2">
-        <GradeDropdown value={grade} onChange={setGrade} compact allowNull />
+      <td className="py-2 px-2">
+        <div className="flex items-center gap-0.5">
+          <input
+            type="number"
+            value={gradeRaw}
+            onChange={(e) => setGradeRaw(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleConfirm();
+              if (e.key === 'Escape') onCancel();
+            }}
+            placeholder="—"
+            min={0}
+            max={100}
+            step={0.1}
+            className={`w-16 bg-[var(--bg-raised)] rounded-[4px] px-1.5 py-0.5 text-[13px] outline-none border border-[var(--accent)] tabular-nums ${
+              grade !== null ? gradeColor(grade) : 'text-[var(--text-primary)]'
+            }`}
+          />
+          <span className="text-[11px] text-[var(--text-tertiary)]">%</span>
+        </div>
       </td>
-      {scenarioMode && <td className="py-2 pr-2" />}
-      <td className="py-2 pr-2 w-16">
+      {scenarioMode && <td className="py-2 px-2" />}
+      <td className="py-2 px-2 w-16">
         <input
           type="number"
           value={credits}
@@ -54,20 +76,8 @@ export function AddCourseRow({ onAdd, onCancel, scenarioMode }: AddCourseRowProp
           className="w-full text-right bg-[var(--bg-raised)] rounded-[4px] px-1.5 py-0.5 text-[13px] text-[var(--text-primary)] outline-none border border-[var(--accent)]"
         />
       </td>
-      <td className="py-2 pr-2 w-14 text-right text-[12px] text-[var(--text-tertiary)]">—</td>
-      <td className="py-2 pr-2 w-12 text-center">
-        <button
-          type="button"
-          onClick={() => setWeighted((w) => !w)}
-          className={`w-7 h-5 rounded-[4px] text-[10px] font-medium transition-colors ${
-            weighted ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'bg-[var(--bg-raised)] text-[var(--text-tertiary)]'
-          }`}
-        >
-          {weighted ? 'W' : '—'}
-        </button>
-      </td>
       <td className="py-2 w-6" />
-      <td className="py-2">
+      <td className="py-2 pr-2">
         <div className="flex items-center gap-1">
           <button
             type="button"

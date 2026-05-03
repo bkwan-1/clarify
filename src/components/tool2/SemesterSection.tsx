@@ -1,22 +1,19 @@
 import { useState } from 'react';
 import type { Semester, CourseEntry } from '../../models/gpa';
-import type { LetterGrade } from '../../models/gradeRecovery';
 import { CourseRow } from './CourseRow';
 import { AddCourseRow } from './AddCourseRow';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
-import { roundGPA, gpaColor } from '../../lib/gpaCalculator';
+import { roundGPA, gradeColor } from '../../lib/gpaCalculator';
 import type { GPAImpactEntry } from '../../models/gpa';
 
 interface SemesterSectionProps {
   semester: Semester;
-  semesterGPA: number | null;
-  weightedSemesterGPA: number | null;
-  cumulativeGPA: number | null;
+  semesterAverage: number | null;
   scenarioMode: boolean;
   impactMap: Record<string, GPAImpactEntry>;
   onUpdateCourse: (courseId: string, patch: Partial<CourseEntry>) => void;
   onDeleteCourse: (courseId: string) => void;
-  onAddCourse: (name: string, grade: LetterGrade | null, credits: number, weighted: boolean) => void;
+  onAddCourse: (name: string, grade: number | null, credits: number) => void;
   onDelete: () => void;
   onRename: (name: string) => void;
   preExpanded?: boolean;
@@ -24,9 +21,7 @@ interface SemesterSectionProps {
 
 export function SemesterSection({
   semester,
-  semesterGPA,
-  weightedSemesterGPA,
-  cumulativeGPA,
+  semesterAverage,
   scenarioMode,
   impactMap,
   onUpdateCourse,
@@ -42,14 +37,12 @@ export function SemesterSection({
   const [nameVal, setNameVal] = useState(semester.name);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  const uwGPA = roundGPA(semesterGPA);
-  const wGPA = roundGPA(weightedSemesterGPA);
+  const avg = roundGPA(semesterAverage);
   const totalCredits = semester.courses.reduce((s, c) => s + c.creditHours, 0);
 
   return (
     <div className="border border-[var(--border)] rounded-[8px] overflow-hidden mb-3 last:mb-0">
       {/* ── Semester header ─────────────────────────────────────────────── */}
-      {/* `group` here makes group-hover work on the delete button */}
       <div
         className="group flex items-center justify-between px-4 py-3 bg-[var(--bg-surface)] cursor-pointer hover:bg-[var(--bg-hover)] transition-colors select-none"
         onClick={() => setExpanded((e) => !e)}
@@ -97,21 +90,11 @@ export function SemesterSection({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Unweighted GPA */}
-          {uwGPA !== null && (
+          {avg !== null && (
             <span className="text-[12px] text-[var(--text-secondary)]">
-              U:{' '}
-              <span className={`font-semibold tabular-nums ${gpaColor(uwGPA)}`}>
-                {uwGPA.toFixed(2)}
-              </span>
-            </span>
-          )}
-          {/* Weighted GPA (only if it differs from unweighted) */}
-          {wGPA !== null && uwGPA !== null && Math.abs(wGPA - uwGPA) > 0.005 && (
-            <span className="text-[12px] text-[var(--text-secondary)]">
-              W:{' '}
-              <span className={`font-semibold tabular-nums ${gpaColor(wGPA)}`}>
-                {wGPA.toFixed(2)}
+              Avg:{' '}
+              <span className={`font-semibold tabular-nums ${gradeColor(avg)}`}>
+                {avg.toFixed(1)}%
               </span>
             </span>
           )}
@@ -140,15 +123,13 @@ export function SemesterSection({
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--bg-raised)]">
                 <th className="text-left py-2 px-4 text-[11px] font-medium text-[var(--text-tertiary)]">Course</th>
-                <th className="text-left py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)]">Grade</th>
+                <th className="text-left py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)]">Grade %</th>
                 {scenarioMode && (
                   <th className="text-left py-2 px-2 text-[11px] font-medium text-[var(--accent)]">
                     → Scenario
                   </th>
                 )}
                 <th className="text-right py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-16">Credits</th>
-                <th className="hidden sm:table-cell text-right py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-14">QP</th>
-                <th className="hidden sm:table-cell text-center py-2 px-2 text-[11px] font-medium text-[var(--text-tertiary)] w-12">Wt.</th>
                 <th className="hidden sm:table-cell w-6" />
                 <th className="w-6" />
               </tr>
@@ -161,14 +142,19 @@ export function SemesterSection({
                   onUpdate={(patch) => onUpdateCourse(course.id, patch)}
                   onDelete={() => onDeleteCourse(course.id)}
                   scenarioMode={scenarioMode}
-                  cumulativeGPA={cumulativeGPA}
-                  gpaWithout={impactMap[course.id]?.gpaWithoutThisCourse ?? null}
+                  averageWithout={impactMap[course.id]?.averageWithoutThisCourse ?? null}
+                  currentAverage={
+                    impactMap[course.id] !== undefined
+                      ? impactMap[course.id].averageWithoutThisCourse +
+                        impactMap[course.id].averageImpactDelta
+                      : null
+                  }
                 />
               ))}
               {addingCourse && (
                 <AddCourseRow
-                  onAdd={(name, grade, credits, weighted) => {
-                    onAddCourse(name, grade, credits, weighted);
+                  onAdd={(name, grade, credits) => {
+                    onAddCourse(name, grade, credits);
                     setAddingCourse(false);
                   }}
                   onCancel={() => setAddingCourse(false)}

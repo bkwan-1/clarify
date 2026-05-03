@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import type { StudentGPARecord, CourseEntry } from '../models/gpa';
 import type { LetterGrade } from '../models/gradeRecovery';
+import { DEFAULT_GRADE_SCALE } from '../models/gradeRecovery';
 import {
-  computeCumulativeGPA,
-  computeSemesterGPA,
-  computeGPAImpactRanking,
+  computeCumulativeAverage,
+  computeSemesterAverage,
+  computeImpactRanking,
   semesterNameFromDate,
 } from '../lib/gpaCalculator';
 
@@ -15,35 +16,110 @@ function uuid(): string {
 
 const DEFAULT_RECORD: StudentGPARecord = {
   semesters: [],
-  weightedScale: 'plus-half',
 };
 
+// Map letter grades to percentage using the standard grade scale
+const LETTER_TO_PCT: Record<string, number> = Object.fromEntries(
+  DEFAULT_GRADE_SCALE.map((tier) => [tier.letter, tier.minPercentage]),
+);
+
+// Migrate old letter-grade format to percentage format
+function migrateRecord(raw: unknown): StudentGPARecord {
+  if (!raw || typeof raw !== 'object') return DEFAULT_RECORD;
+  const r = raw as Record<string, unknown>;
+  if (!Array.isArray(r.semesters)) return DEFAULT_RECORD;
+
+  return {
+    semesters: r.semesters.map((sem: unknown) => {
+      const s = sem as Record<string, unknown>;
+      return {
+        id: String(s.id ?? uuid()),
+        name: String(s.name ?? 'Unknown'),
+        order: Number(s.order ?? 0),
+        courses: Array.isArray(s.courses)
+          ? s.courses.map((c: unknown) => {
+              const course = c as Record<string, unknown>;
+              let gradePercent: number | null = null;
+              if (typeof course.gradePercent === 'number') {
+                gradePercent = course.gradePercent;
+              } else if (
+                typeof course.letterGrade === 'string' &&
+                course.letterGrade in LETTER_TO_PCT
+              ) {
+                gradePercent = LETTER_TO_PCT[course.letterGrade];
+              }
+              let scenarioGrade: number | null = null;
+              if (typeof course.scenarioGrade === 'number') {
+                scenarioGrade = course.scenarioGrade;
+              } else if (
+                typeof course.scenarioGrade === 'string' &&
+                course.scenarioGrade in LETTER_TO_PCT
+              ) {
+                scenarioGrade = LETTER_TO_PCT[course.scenarioGrade];
+              }
+              return {
+                id: String(course.id ?? uuid()),
+                name: String(course.name ?? ''),
+                creditHours: Number(course.creditHours ?? 3),
+                gradePercent,
+                isIncludedInGPA: course.isIncludedInGPA !== false,
+                scenarioGrade,
+              };
+            })
+          : [],
+      };
+    }),
+  };
+}
+
 export function useGPATracker() {
-  const [record, setRecord] = useLocalStorage<StudentGPARecord>(
+  const [rawRecord, setRecord] = useLocalStorage<StudentGPARecord>(
     'clarify_gpa_tracker',
     DEFAULT_RECORD,
   );
-  const [scenarioMode, setScenarioMode] = useState(false);
 
-  const unweightedResult = useMemo(
-    () => computeCumulativeGPA(record.semesters, false, scenarioMode, record.weightedScale),
+  // Migrate legacy letter-grade data once on mount
+  useEffect(() => {
+    setRecord((prev) => {
+      // Check if any course has no gradePercent and no valid structure
+      // (i.e., old format survived JSON parse with wrong fields)
+      const needsMigration = prev.semesters.some((s) =>
+        s.courses.some((c) => {
+          const raw = c as unknown as Record<string, unknown>;
+          return (
+            c.gradePercent === undefined &&
+            typeof raw.letterGrade === 'string'
+          );
+        }),
+      );
+      if (!needsMigration) return prev;
+      return migrateRecord(prev);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const record = rawRecord;
+
+  const [scenarioMode, setScenarioModeState] = useLocalStorage<boolean>(
+    'clarify_gpa_scenario',
+    false,
+  );
+
+  const averageResult = useMemo(
+    () => computeCumulativeAverage(record.semesters, scenarioMode),
     [record, scenarioMode],
   );
-  const weightedResult = useMemo(
-    () => computeCumulativeGPA(record.semesters, true, scenarioMode, record.weightedScale),
-    [record, scenarioMode],
-  );
+
   const impactRanking = useMemo(
-    () => computeGPAImpactRanking(record.semesters, true, record.weightedScale),
+    () => computeImpactRanking(record.semesters),
     [record],
   );
 
-  const semesterGPAs = useMemo(
+  const semesterAverages = useMemo(
     () =>
       record.semesters.map((sem) => ({
         id: sem.id,
-        unweighted: computeSemesterGPA(sem, false, scenarioMode, record.weightedScale),
-        weighted: computeSemesterGPA(sem, true, scenarioMode, record.weightedScale),
+        average: computeSemesterAverage(sem, scenarioMode),
       })),
     [record, scenarioMode],
   );
@@ -81,8 +157,7 @@ export function useGPATracker() {
       id,
       name: '',
       creditHours: 3,
-      letterGrade: null,
-      courseWeight: 'standard',
+      gradePercent: null,
       isIncludedInGPA: true,
       scenarioGrade: null,
       ...partial,
@@ -121,21 +196,19 @@ export function useGPATracker() {
   }
 
   function toggleScenarioMode() {
-    setScenarioMode((on) => {
+    setScenarioModeState((on) => {
       if (!on) {
-        // Entering scenario mode: copy letterGrade → scenarioGrade for all
         setRecord((prev) => ({
           ...prev,
           semesters: prev.semesters.map((s) => ({
             ...s,
             courses: s.courses.map((c) => ({
               ...c,
-              scenarioGrade: c.letterGrade,
+              scenarioGrade: c.gradePercent,
             })),
           })),
         }));
       } else {
-        // Leaving: clear all scenario grades
         setRecord((prev) => ({
           ...prev,
           semesters: prev.semesters.map((s) => ({
@@ -148,7 +221,7 @@ export function useGPATracker() {
     });
   }
 
-  function setScenarioGrade(semesterId: string, courseId: string, grade: LetterGrade | null) {
+  function setScenarioGrade(semesterId: string, courseId: string, grade: number | null) {
     updateCourse(semesterId, courseId, { scenarioGrade: grade });
   }
 
@@ -159,12 +232,12 @@ export function useGPATracker() {
         ...s,
         courses: s.courses.map((c) => ({
           ...c,
-          letterGrade: c.scenarioGrade ?? c.letterGrade,
+          gradePercent: c.scenarioGrade ?? c.gradePercent,
           scenarioGrade: null,
         })),
       })),
     }));
-    setScenarioMode(false);
+    setScenarioModeState(false);
   }
 
   function resetScenarios() {
@@ -172,7 +245,7 @@ export function useGPATracker() {
       ...prev,
       semesters: prev.semesters.map((s) => ({
         ...s,
-        courses: s.courses.map((c) => ({ ...c, scenarioGrade: c.letterGrade })),
+        courses: s.courses.map((c) => ({ ...c, scenarioGrade: c.gradePercent })),
       })),
     }));
   }
@@ -182,10 +255,11 @@ export function useGPATracker() {
     courseName: string,
     projectedGrade: LetterGrade,
   ): string {
+    const gradePercent = LETTER_TO_PCT[projectedGrade] ?? null;
     return addCourse(semesterId, {
       name: courseName,
-      scenarioGrade: projectedGrade,
-      letterGrade: null,
+      gradePercent,
+      scenarioGrade: gradePercent,
     });
   }
 
@@ -193,11 +267,10 @@ export function useGPATracker() {
     record,
     semesters: record.semesters,
     scenarioMode,
-    unweightedGPA: unweightedResult.gpa,
-    weightedGPA: weightedResult.gpa,
-    totalCredits: unweightedResult.totalCredits,
+    averageGrade: averageResult.average,
+    totalCredits: averageResult.totalCredits,
     impactRanking,
-    semesterGPAs,
+    semesterAverages,
     addSemester,
     deleteSemester,
     renameSemester,

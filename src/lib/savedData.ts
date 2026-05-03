@@ -35,7 +35,7 @@ export function readSavedDataSummary(): SavedDataSummary {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gpaCoursesWithGrades: number = semesters.reduce((sum: number, s: any) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return sum + (s.courses ?? []).filter((c: any) => c.letterGrade !== null).length;
+      return sum + (s.courses ?? []).filter((c: any) => c.gradePercent !== null && c.gradePercent !== undefined).length;
     }, 0);
 
     return {

@@ -1,34 +1,8 @@
-import type {
-  CourseEntry,
-  Semester,
-  StudentGPARecord,
-  GPAImpactEntry,
-  WeightedScale,
-} from '../models/gpa';
-import { STANDARD_GRADE_POINTS, WEIGHT_BONUS } from '../models/gpa';
-import type { LetterGrade } from '../models/gradeRecovery';
+import type { CourseEntry, Semester, GPAImpactEntry } from '../models/gpa';
 
-export function computeWeightedGradePoints(
-  grade: LetterGrade,
-  courseWeight: CourseEntry['courseWeight'],
-  scale: WeightedScale = 'plus-half',
-): number {
-  const base = STANDARD_GRADE_POINTS[grade];
-  if (base === 0) return 0; // no bonus for F
-  const bonus = WEIGHT_BONUS[courseWeight];
-  if (scale === 'plus-half') {
-    return Math.min(base + bonus, 5.0);
-  }
-  // five-point: AP/IB A = 5.0; otherwise standard
-  if (courseWeight === 'AP' || courseWeight === 'IB' || courseWeight === 'college') {
-    return Math.min(base + 1.0, 5.0);
-  }
-  return Math.min(base + bonus, 5.0);
-}
-
-function effectiveGrade(course: CourseEntry, scenarioMode: boolean): LetterGrade | null {
-  if (scenarioMode && course.scenarioGrade) return course.scenarioGrade;
-  return course.letterGrade;
+function effectiveGrade(course: CourseEntry, scenarioMode: boolean): number | null {
+  if (scenarioMode && course.scenarioGrade !== null) return course.scenarioGrade;
+  return course.gradePercent;
 }
 
 function isEligible(course: CourseEntry, scenarioMode: boolean): boolean {
@@ -39,119 +13,78 @@ function isEligible(course: CourseEntry, scenarioMode: boolean): boolean {
   );
 }
 
-export function computeSemesterGPA(
+export function computeSemesterAverage(
   semester: Semester,
-  useWeighted: boolean,
   scenarioMode: boolean,
-  scale: WeightedScale = 'plus-half',
 ): number | null {
   const eligible = semester.courses.filter((c) => isEligible(c, scenarioMode));
   if (eligible.length === 0) return null;
-
-  let totalQP = 0;
+  let totalWeighted = 0;
   let totalCr = 0;
   for (const c of eligible) {
-    const grade = effectiveGrade(c, scenarioMode)!;
-    const gp = useWeighted
-      ? computeWeightedGradePoints(grade, c.courseWeight, scale)
-      : STANDARD_GRADE_POINTS[grade];
-    totalQP += gp * c.creditHours;
+    totalWeighted += effectiveGrade(c, scenarioMode)! * c.creditHours;
     totalCr += c.creditHours;
   }
-  return totalCr > 0 ? totalQP / totalCr : null;
+  return totalCr > 0 ? totalWeighted / totalCr : null;
 }
 
-export interface CumulativeGPAResult {
-  gpa: number | null;
-  totalQualityPoints: number;
+export interface CumulativeAverageResult {
+  average: number | null;
+  totalWeighted: number;
   totalCredits: number;
 }
 
-export function computeCumulativeGPA(
+export function computeCumulativeAverage(
   semesters: Semester[],
-  useWeighted: boolean,
   scenarioMode: boolean,
-  scale: WeightedScale = 'plus-half',
-): CumulativeGPAResult {
-  let totalQP = 0;
+): CumulativeAverageResult {
+  let totalWeighted = 0;
   let totalCr = 0;
-
   for (const sem of semesters) {
     for (const c of sem.courses) {
       if (!isEligible(c, scenarioMode)) continue;
-      const grade = effectiveGrade(c, scenarioMode)!;
-      const gp = useWeighted
-        ? computeWeightedGradePoints(grade, c.courseWeight, scale)
-        : STANDARD_GRADE_POINTS[grade];
-      totalQP += gp * c.creditHours;
+      totalWeighted += effectiveGrade(c, scenarioMode)! * c.creditHours;
       totalCr += c.creditHours;
     }
   }
-
   return {
-    gpa: totalCr > 0 ? totalQP / totalCr : null,
-    totalQualityPoints: totalQP,
+    average: totalCr > 0 ? totalWeighted / totalCr : null,
+    totalWeighted,
     totalCredits: totalCr,
   };
 }
 
-export function computeGPAImpactRanking(
-  semesters: Semester[],
-  useWeighted: boolean,
-  scale: WeightedScale = 'plus-half',
-): GPAImpactEntry[] {
-  const { gpa: baseGPA, totalQualityPoints: baseQP, totalCredits: baseCr } =
-    computeCumulativeGPA(semesters, useWeighted, false, scale);
+export function computeImpactRanking(semesters: Semester[]): GPAImpactEntry[] {
+  const { average: baseAvg, totalWeighted: baseWP, totalCredits: baseCr } =
+    computeCumulativeAverage(semesters, false);
 
-  if (baseGPA === null || baseCr === 0) return [];
+  if (baseAvg === null || baseCr === 0) return [];
 
   const results: Omit<GPAImpactEntry, 'rankPosition'>[] = [];
 
   for (const sem of semesters) {
     for (const c of sem.courses) {
       if (!isEligible(c, false)) continue;
-      const grade = c.letterGrade!;
-      const gp = useWeighted
-        ? computeWeightedGradePoints(grade, c.courseWeight, scale)
-        : STANDARD_GRADE_POINTS[grade];
-      const qp_i = gp * c.creditHours;
-      const cr_i = c.creditHours;
-
-      const remainingCr = baseCr - cr_i;
+      const wp_i = c.gradePercent! * c.creditHours;
+      const remainingCr = baseCr - c.creditHours;
       if (remainingCr <= 0) continue;
-      const gpaWithout = (baseQP - qp_i) / remainingCr;
-      const delta = baseGPA - gpaWithout;
+      const avgWithout = (baseWP - wp_i) / remainingCr;
+      const delta = baseAvg - avgWithout;
 
       results.push({
         courseId: c.id,
         courseName: c.name,
         semesterId: sem.id,
         semesterName: sem.name,
-        currentGrade: grade,
-        currentGradePoints: STANDARD_GRADE_POINTS[grade],
-        gpaWithoutThisCourse: gpaWithout,
-        gpaImpactDelta: delta,
+        currentGrade: c.gradePercent!,
+        averageWithoutThisCourse: avgWithout,
+        averageImpactDelta: delta,
       });
     }
   }
 
-  results.sort((a, b) => a.gpaImpactDelta - b.gpaImpactDelta);
+  results.sort((a, b) => a.averageImpactDelta - b.averageImpactDelta);
   return results.map((r, i) => ({ ...r, rankPosition: i + 1 }));
-}
-
-export function computeO1ScenarioUpdate(
-  oldTotalQP: number,
-  oldQP_i: number,
-  newQP_i: number,
-  totalCr: number,
-): number | null {
-  if (totalCr <= 0) return null;
-  return (oldTotalQP - oldQP_i + newQP_i) / totalCr;
-}
-
-export function roundGPA(gpa: number | null, digits = 2): number | null {
-  if (gpa === null) return null;
-  return Math.round(gpa * 10 ** digits) / 10 ** digits;
 }
 
 export function semesterNameFromDate(date = new Date()): string {
@@ -162,14 +95,6 @@ export function semesterNameFromDate(date = new Date()): string {
   return `Spring ${year}`;
 }
 
-export function gpaColor(gpa: number | null): string {
-  if (gpa === null) return 'text-[var(--text-secondary)]';
-  if (gpa >= 3.5) return 'text-[var(--success)]';
-  if (gpa >= 3.0) return 'text-[var(--accent)]';
-  if (gpa >= 2.0) return 'text-[var(--warning)]';
-  return 'text-[var(--danger)]';
-}
-
 export function gradeColor(pct: number | null): string {
   if (pct === null) return 'text-[var(--text-secondary)]';
   if (pct >= 90) return 'text-[var(--success)]';
@@ -178,6 +103,10 @@ export function gradeColor(pct: number | null): string {
   return 'text-[var(--danger)]';
 }
 
-export function gradeRecoveryRecord(record: StudentGPARecord) {
-  return record;
+// Alias kept for components that import gpaColor
+export { gradeColor as gpaColor };
+
+export function roundGPA(val: number | null, digits = 1): number | null {
+  if (val === null) return null;
+  return Math.round(val * 10 ** digits) / 10 ** digits;
 }

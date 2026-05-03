@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { CourseEntry } from '../../models/gpa';
-import { GradeDropdown } from '../shared/GradeDropdown';
-import { STANDARD_GRADE_POINTS } from '../../models/gpa';
+import { gradeColor } from '../../lib/gpaCalculator';
 import { Tooltip } from '../shared/Tooltip';
 
 interface CourseRowProps {
@@ -9,8 +8,55 @@ interface CourseRowProps {
   onUpdate: (patch: Partial<CourseEntry>) => void;
   onDelete: () => void;
   scenarioMode: boolean;
-  cumulativeGPA: number | null;
-  gpaWithout?: number | null;
+  currentAverage: number | null;
+  averageWithout?: number | null;
+}
+
+function PercentInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+  placeholder?: string;
+}) {
+  const [raw, setRaw] = useState(value !== null ? String(value) : '');
+
+  function commit(str: string) {
+    const n = parseFloat(str);
+    if (str.trim() === '' || isNaN(n)) {
+      onChange(null);
+    } else {
+      onChange(Math.max(0, Math.min(100, n)));
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <input
+        type="number"
+        value={raw}
+        onChange={(e) => setRaw(e.target.value)}
+        onBlur={(e) => {
+          commit(e.target.value);
+          const n = parseFloat(e.target.value);
+          if (!isNaN(n)) setRaw(String(Math.max(0, Math.min(100, n))));
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        }}
+        placeholder={placeholder ?? '—'}
+        min={0}
+        max={100}
+        step={0.1}
+        className={`w-16 bg-[var(--bg-raised)] hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] border border-transparent focus:border-[var(--accent)] rounded-[4px] px-1.5 py-0.5 text-[13px] outline-none transition-colors tabular-nums ${
+          value !== null ? gradeColor(value) : 'text-[var(--text-tertiary)]'
+        }`}
+      />
+      <span className="text-[11px] text-[var(--text-tertiary)]">%</span>
+    </div>
+  );
 }
 
 export function CourseRow({
@@ -18,27 +64,21 @@ export function CourseRow({
   onUpdate,
   onDelete,
   scenarioMode,
-  cumulativeGPA,
-  gpaWithout,
+  currentAverage,
+  averageWithout,
 }: CourseRowProps) {
   const [hovering, setHovering] = useState(false);
 
-  const effectiveGrade =
-    scenarioMode && course.scenarioGrade ? course.scenarioGrade : course.letterGrade;
-  const gp = effectiveGrade ? STANDARD_GRADE_POINTS[effectiveGrade] : null;
-  const qp = gp !== null && gp !== undefined ? (gp * course.creditHours).toFixed(1) : null;
-
-  // Whether this row's scenario grade has diverged from the actual grade
   const scenarioChanged =
     scenarioMode &&
     course.scenarioGrade !== null &&
-    course.scenarioGrade !== course.letterGrade;
+    course.scenarioGrade !== course.gradePercent;
 
   const delta =
-    gpaWithout !== null && gpaWithout !== undefined && cumulativeGPA !== null
-      ? cumulativeGPA - gpaWithout
+    averageWithout !== null && averageWithout !== undefined && currentAverage !== null
+      ? currentAverage - averageWithout
       : null;
-  const hurtsGPA = delta !== null && delta < -0.005;
+  const hurtsAverage = delta !== null && delta < -0.05;
 
   return (
     <tr
@@ -59,16 +99,15 @@ export function CourseRow({
         />
       </td>
 
-      {/* Actual grade */}
+      {/* Grade % */}
       <td className="py-2 px-2">
-        <GradeDropdown
-          value={course.letterGrade}
-          onChange={(g) => onUpdate({ letterGrade: g })}
-          compact
+        <PercentInput
+          value={course.gradePercent}
+          onChange={(v) => onUpdate({ gradePercent: v })}
         />
       </td>
 
-      {/* Scenario grade dropdown — only in scenario mode */}
+      {/* Scenario grade — only in scenario mode */}
       {scenarioMode && (
         <td className="py-2 px-2">
           <div className="flex items-center gap-1.5">
@@ -81,10 +120,9 @@ export function CourseRow({
                 stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"
               />
             </svg>
-            <GradeDropdown
+            <PercentInput
               value={course.scenarioGrade}
-              onChange={(g) => onUpdate({ scenarioGrade: g })}
-              compact
+              onChange={(v) => onUpdate({ scenarioGrade: v })}
             />
           </div>
         </td>
@@ -105,45 +143,11 @@ export function CourseRow({
         />
       </td>
 
-      {/* Quality points — hidden on mobile */}
-      <td className="hidden sm:table-cell py-2 px-2 w-14 text-right text-[12px] text-[var(--text-tertiary)] tabular-nums">
-        {qp ?? '—'}
-      </td>
-
-      {/* Weight toggle — hidden on mobile */}
-      <td className="hidden sm:table-cell py-2 px-2 w-12 text-center">
-        <button
-          type="button"
-          onClick={() => {
-            const next =
-              course.courseWeight === 'standard'
-                ? 'honors'
-                : course.courseWeight === 'honors'
-                ? 'AP'
-                : 'standard';
-            onUpdate({ courseWeight: next });
-          }}
-          className={`w-9 h-5 rounded-[4px] text-[10px] font-medium transition-colors ${
-            course.courseWeight === 'AP'
-              ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
-              : course.courseWeight === 'honors'
-              ? 'bg-[var(--warning-muted)] text-[var(--warning)]'
-              : 'bg-[var(--bg-raised)] text-[var(--text-tertiary)]'
-          }`}
-        >
-          {course.courseWeight === 'AP'
-            ? 'AP'
-            : course.courseWeight === 'honors'
-            ? 'Hon'
-            : '—'}
-        </button>
-      </td>
-
-      {/* GPA impact indicator — hidden on mobile */}
+      {/* Average impact indicator — hidden on mobile */}
       <td className="hidden sm:table-cell py-2 w-6">
-        {hurtsGPA && gpaWithout !== null && gpaWithout !== undefined && (
+        {hurtsAverage && averageWithout !== null && averageWithout !== undefined && (
           <Tooltip
-            content={`Removing this would raise GPA: ${(cumulativeGPA ?? 0).toFixed(2)} → ${gpaWithout.toFixed(2)}`}
+            content={`Removing this would raise avg: ${(currentAverage ?? 0).toFixed(1)}% → ${averageWithout.toFixed(1)}%`}
             side="left"
           >
             <span className="text-[var(--danger)] text-[11px] cursor-help select-none">↓</span>
@@ -151,7 +155,7 @@ export function CourseRow({
         )}
       </td>
 
-      {/* Delete — always rendered; .delete-btn makes it visible on touch */}
+      {/* Delete */}
       <td className="py-2 pr-2 w-6">
         <button
           type="button"

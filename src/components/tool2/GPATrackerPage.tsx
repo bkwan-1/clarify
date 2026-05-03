@@ -5,7 +5,7 @@ import { ImpactRankingPanel } from './ImpactRankingPanel';
 import { EmptyState } from '../shared/EmptyState';
 import { useGPATracker } from '../../hooks/useGPATracker';
 import type { LetterGrade } from '../../models/gradeRecovery';
-import { semesterNameFromDate, computeCumulativeGPA } from '../../lib/gpaCalculator';
+import { semesterNameFromDate, computeCumulativeAverage } from '../../lib/gpaCalculator';
 import type { GPAImpactEntry } from '../../models/gpa';
 
 interface GPATrackerPageProps {
@@ -18,11 +18,10 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
     record,
     semesters,
     scenarioMode,
-    weightedGPA,
-    unweightedGPA,
+    averageGrade,
     totalCredits,
     impactRanking,
-    semesterGPAs,
+    semesterAverages,
     addSemester,
     deleteSemester,
     renameSemester,
@@ -45,42 +44,30 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
     impactMap[entry.courseId] = entry;
   }
 
-  // ── Scenario extras ─────────────────────────────────────────────────────
-
-  // "Actual" (non-scenario) GPAs, only computed when needed for delta display
-  const actualWeightedGPA = useMemo(
+  // "Actual" (non-scenario) average, only when scenario is active
+  const actualAverage = useMemo(
     () =>
       scenarioMode
-        ? computeCumulativeGPA(record.semesters, true, false, record.weightedScale).gpa
-        : null,
-    [scenarioMode, record],
-  );
-  const actualUnweightedGPA = useMemo(
-    () =>
-      scenarioMode
-        ? computeCumulativeGPA(record.semesters, false, false, record.weightedScale).gpa
+        ? computeCumulativeAverage(record.semesters, false).average
         : null,
     [scenarioMode, record],
   );
 
-  // Best-case: all in-progress (null letterGrade) courses → A
-  const bestCaseGPA = useMemo(() => {
+  // Best-case: all in-progress (null gradePercent) courses → 100%
+  const bestCaseAverage = useMemo(() => {
     if (!scenarioMode) return null;
     const bestSemesters = record.semesters.map((sem) => ({
       ...sem,
       courses: sem.courses.map((c) => ({
         ...c,
         scenarioGrade:
-          c.letterGrade === null
-            ? ('A' as LetterGrade)
-            : (c.scenarioGrade ?? c.letterGrade),
+          c.gradePercent === null ? 100 : (c.scenarioGrade ?? c.gradePercent),
       })),
     }));
-    return computeCumulativeGPA(bestSemesters, true, true, record.weightedScale).gpa;
+    return computeCumulativeAverage(bestSemesters, true).average;
   }, [scenarioMode, record]);
 
   // ── Handoff from Tool 1 ─────────────────────────────────────────────────
-
   useEffect(() => {
     if (!pendingHandoff) return;
     const targetId =
@@ -99,13 +86,11 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      {/* ── Top bar: GPA summary + scenario controls ──────────────────────── */}
+      {/* ── Top bar: average summary + scenario controls ───────────────── */}
       <GPASummaryBar
-        weightedGPA={weightedGPA}
-        unweightedGPA={unweightedGPA}
-        actualWeightedGPA={actualWeightedGPA}
-        actualUnweightedGPA={actualUnweightedGPA}
-        bestCaseGPA={bestCaseGPA}
+        averageGrade={averageGrade}
+        actualAverage={actualAverage}
+        bestCaseAverage={bestCaseAverage}
         totalCredits={totalCredits}
         semesterCount={semesters.length}
         scenarioMode={scenarioMode}
@@ -120,7 +105,7 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
           {semesters.length === 0 ? (
             <EmptyState
               title="No semesters yet"
-              description="Add your first semester to start tracking your GPA."
+              description="Add your first semester to start tracking your grades."
               action={
                 <button
                   type="button"
@@ -134,26 +119,23 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
           ) : (
             <div className="max-w-3xl mx-auto">
               {semesters.map((sem, i) => {
-                const gpaData = semesterGPAs.find((g) => g.id === sem.id);
+                const avgData = semesterAverages.find((g) => g.id === sem.id);
                 return (
                   <SemesterSection
                     key={sem.id}
                     semester={sem}
-                    semesterGPA={gpaData?.unweighted ?? null}
-                    weightedSemesterGPA={gpaData?.weighted ?? null}
-                    cumulativeGPA={weightedGPA}
+                    semesterAverage={avgData?.average ?? null}
                     scenarioMode={scenarioMode}
                     impactMap={impactMap}
                     onUpdateCourse={(courseId, patch) => updateCourse(sem.id, courseId, patch)}
                     onDeleteCourse={(courseId) => deleteCourse(sem.id, courseId)}
-                    onAddCourse={(name, grade, credits, weighted) => {
+                    onAddCourse={(name, grade, credits) => {
                       const cid = addCourse(sem.id, {
                         name,
-                        letterGrade: grade,
+                        gradePercent: grade,
                         creditHours: credits,
-                        courseWeight: weighted ? 'AP' : 'standard',
                       });
-                      if (scenarioMode && grade) {
+                      if (scenarioMode && grade !== null) {
                         setScenarioGrade(sem.id, cid, grade);
                       }
                     }}
@@ -215,7 +197,7 @@ export function GPATrackerPage({ pendingHandoff, onHandoffConsumed }: GPATracker
             <ImpactRankingPanel
               ranking={impactRanking}
               semesters={semesters}
-              currentGPA={weightedGPA}
+              currentAverage={averageGrade}
               totalCredits={totalCredits}
             />
           </div>
