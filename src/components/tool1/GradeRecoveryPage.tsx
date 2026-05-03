@@ -287,6 +287,12 @@ function ClassDetailContent({
                 ),
               })
             }
+            onDeleteCategory={() =>
+              onUpdateClass({
+                ...cls,
+                categories: cls.categories.filter((c) => c.id !== cat.id),
+              })
+            }
           />
         ))}
       </div>

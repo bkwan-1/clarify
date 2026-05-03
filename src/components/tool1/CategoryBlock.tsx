@@ -14,6 +14,7 @@ interface CategoryBlockProps {
   onDeleteRemaining?: (assignmentId: string) => void;
   onAddRemaining?: () => void;
   onUpdateCategory: (patch: Partial<Pick<GradeCategory, 'name' | 'weight' | 'dropLowest'>>) => void;
+  onDeleteCategory?: () => void;
 }
 
 export function CategoryBlock({
@@ -26,9 +27,11 @@ export function CategoryBlock({
   onDeleteRemaining,
   onAddRemaining,
   onUpdateCategory,
+  onDeleteCategory,
 }: CategoryBlockProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [quickInput, setQuickInput] = useState('');
+  const [headerHovered, setHeaderHovered] = useState(false);
   const { pct } = computeCategoryCurrentPercentage(category);
 
   const pctColor =
@@ -56,7 +59,11 @@ export function CategoryBlock({
   return (
     <div className="mb-5 last:mb-0">
       {/* Category header */}
-      <div className="flex items-center gap-2 mb-2">
+      <div
+        className="flex items-center gap-2 mb-2 group/cat"
+        onMouseEnter={() => setHeaderHovered(true)}
+        onMouseLeave={() => setHeaderHovered(false)}
+      >
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
@@ -99,6 +106,20 @@ export function CategoryBlock({
             {category.remainingAssignments.length}{' '}
             {category.remainingAssignments.length === 1 ? 'item' : 'items'}
           </span>
+        )}
+        {onDeleteCategory && (
+          <button
+            type="button"
+            onClick={onDeleteCategory}
+            aria-label="Delete category"
+            className={`w-5 h-5 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-all ${
+              headerHovered ? 'opacity-100' : 'opacity-0'
+            } ${mode === 'completed' && pct === null && 'ml-auto'}`}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          </button>
         )}
       </div>
 
