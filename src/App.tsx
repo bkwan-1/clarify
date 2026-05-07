@@ -27,14 +27,8 @@ function App() {
     }
   });
 
-  // Landing shows on first visit; logo click re-shows it any time
-  const [showLanding, setShowLanding] = useState(() => {
-    try {
-      return localStorage.getItem('clarify_welcomed') !== 'true';
-    } catch {
-      return true;
-    }
-  });
+  // Landing shows on every open; logo click re-shows it any time
+  const [showLanding, setShowLanding] = useState(true);
 
   const [showAbout, setShowAbout] = useState(false);
   const [pendingHandoff, setPendingHandoff] = useState<PendingHandoff | null>(null);
@@ -52,9 +46,6 @@ function App() {
   function handleStart(tool: ActiveTool) {
     setActiveTool(tool);
     setShowLanding(false);
-    try {
-      localStorage.setItem('clarify_welcomed', 'true');
-    } catch {}
   }
 
   function handleSwitchTool(tool: ActiveTool) {

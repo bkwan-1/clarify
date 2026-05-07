@@ -9,7 +9,7 @@ interface LandingPageProps {
   onThemeToggle: () => void;
 }
 
-const FULL_TITLE = 'GradeClarify.';
+const FULL_TITLE = 'Clarify.';
 
 export function LandingPage({ onStart, theme, onThemeToggle }: LandingPageProps) {
   const [displayed, setDisplayed] = useState('');
@@ -35,7 +35,7 @@ export function LandingPage({ onStart, theme, onThemeToggle }: LandingPageProps)
       <header className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0">
         <div className="flex items-center gap-1.5 select-none">
           <span className="w-2 h-2 rounded-full bg-indigo-500" />
-          <span className="text-[13px] font-semibold text-white/90 tracking-tight">GradeClarify</span>
+          <span className="text-[13px] font-semibold text-white/90 tracking-tight">Clarify</span>
         </div>
         <ThemeToggle theme={theme} onToggle={onThemeToggle} />
       </header>
@@ -53,8 +53,11 @@ export function LandingPage({ onStart, theme, onThemeToggle }: LandingPageProps)
                 <span className="animate-pulse text-indigo-400 ml-0.5">|</span>
               )}
             </h1>
-            <p className="text-[15px] text-white/50 leading-relaxed max-w-sm mx-auto">
-              Grade recovery and GPA tracking that shows the math, not just the answer.
+            <p className="text-[13px] font-semibold uppercase tracking-widest text-white/30 mb-3">
+              Your academic toolkit
+            </p>
+            <p className="text-[16px] text-white/55 leading-relaxed max-w-[360px] mx-auto">
+              Know exactly what you need — to pass, to hit your GPA, to finish strong.
             </p>
           </div>
 
