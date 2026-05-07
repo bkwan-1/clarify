@@ -3,7 +3,7 @@ import { TopNav } from './components/shell/TopNav';
 import { BottomNav } from './components/shell/BottomNav';
 import { AboutModal } from './components/shell/AboutModal';
 import type { ActiveTool } from './components/shell/TopNav';
-import { WelcomeScreen } from './components/WelcomeScreen';
+import { LandingPage } from './components/LandingPage';
 import { GradeRecoveryPage } from './components/tool1/GradeRecoveryPage';
 import { GPATrackerPage } from './components/tool2/GPATrackerPage';
 import { useTheme } from './hooks/useTheme';
@@ -70,7 +70,7 @@ function App() {
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Landing / welcome-back screen — covers everything at z-50 */}
       {showLanding && (
-        <WelcomeScreen
+        <LandingPage
           onStart={handleStart}
           theme={theme}
           onThemeToggle={toggleTheme}
