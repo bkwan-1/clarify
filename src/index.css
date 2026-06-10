@@ -21,6 +21,8 @@
   --warning-muted: rgba(245, 158, 11, 0.12);
   --danger: #ef4444;
   --danger-muted: rgba(239, 68, 68, 0.12);
+  --divider: rgba(0, 0, 0, 0.12);
+  --track-bg: rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="dark"] {
@@ -33,6 +35,8 @@
   --text-primary: #fafafa;
   --text-secondary: #a1a1aa;
   --text-tertiary: #52525b;
+  --divider: rgba(255, 255, 255, 0.12);
+  --track-bg: rgba(255, 255, 255, 0.1);
 }
 
 * { box-sizing: border-box; }
@@ -143,8 +147,8 @@ input[type="range"] {
     to right,
     #6366f1 0%,
     #6366f1 var(--range-fill, 50%),
-    rgba(255, 255, 255, 0.1) var(--range-fill, 50%),
-    rgba(255, 255, 255, 0.1) 100%
+    var(--track-bg) var(--range-fill, 50%),
+    var(--track-bg) 100%
   );
   outline: none;
 }
@@ -156,9 +160,9 @@ input[type="range"]::-webkit-slider-thumb {
   height: 18px;
   border-radius: 50%;
   background: linear-gradient(135deg, #818cf8, #a855f7);
-  border: 2px solid #0a0a0c;
+  border: 2px solid var(--bg-base);
   cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px var(--track-bg);
   transition: transform 0.15s ease;
 }
 
@@ -172,7 +176,7 @@ input[type="range"]::-moz-range-thumb {
   height: 18px;
   border-radius: 50%;
   background: linear-gradient(135deg, #818cf8, #a855f7);
-  border: 2px solid #0a0a0c;
+  border: 2px solid var(--bg-base);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -201,7 +205,7 @@ input[type="range"]::-moz-range-track {
 }
 
 .divider-dashed {
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+  border-bottom: 1px dashed var(--divider);
 }
 
 /* Delete buttons: opacity-0 by default (hover reveals on mouse), always visible on touch */

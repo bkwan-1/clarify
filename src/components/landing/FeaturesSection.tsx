@@ -26,7 +26,7 @@ export function FeaturesSection({ onStart }: FeaturesSectionProps) {
   return (
     <section className="relative px-6 sm:px-12 py-24 sm:py-32 max-w-[1100px] mx-auto">
       <Reveal variant="fade-up">
-        <p className="text-[13px] font-semibold uppercase tracking-widest text-white/30 mb-12 sm:mb-16 max-w-[480px]">
+        <p className="text-[13px] font-semibold uppercase tracking-widest text-black/30 dark:text-white/30 mb-12 sm:mb-16 max-w-[480px]">
           Two tools. Built for the two questions you actually ask.
         </p>
       </Reveal>
@@ -41,7 +41,7 @@ export function FeaturesSection({ onStart }: FeaturesSectionProps) {
             onClick={() => onStart('grade-recovery')}
           />
         </Reveal>
-        <Reveal variant="fade-left" className="lg:mt-16">
+        <Reveal variant="fade-left">
           <ToolBlock
             quote="What's my real GPA?"
             specs={GPA_TRACKER_SPECS}
@@ -83,7 +83,7 @@ function ToolBlock({
 
   return (
     <div>
-      <h3 className="text-[26px] sm:text-[32px] font-semibold text-white tracking-tight leading-snug mb-6">
+      <h3 className="text-[26px] sm:text-[32px] font-semibold text-[var(--text-primary)] tracking-tight leading-snug mb-6">
         &ldquo;{quote}&rdquo;
       </h3>
 

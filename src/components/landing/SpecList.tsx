@@ -17,7 +17,7 @@ export function SpecList({
     <ul className="space-y-2.5">
       {items.map((item, i) => (
         <Reveal key={item} variant={revealVariant} delay={i * 60}>
-          <li className="flex items-start gap-2.5 font-mono text-[12.5px] leading-relaxed text-white/55">
+          <li className="flex items-start gap-2.5 font-mono text-[12.5px] leading-relaxed text-black/55 dark:text-white/55">
             {variant === 'check' ? (
               <svg width="13" height="13" viewBox="0 0 12 12" fill="none" className={`shrink-0 mt-[3px] ${accentClassName}`}>
                 <path d="M2.5 6.2l2.2 2.2L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
