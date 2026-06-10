@@ -97,6 +97,113 @@ input[type=number] { -moz-appearance: textfield; }
   animation: check-draw 0.3s ease-out 0.05s both;
 }
 
+/* ---------------------------------------------------------------------------
+   Landing page: scroll-reveal
+--------------------------------------------------------------------------- */
+
+.reveal {
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-fade-up { transform: translateY(24px); }
+.reveal-fade-in { transform: none; }
+.reveal-fade-left { transform: translateX(-24px); }
+.reveal-fade-right { transform: translateX(24px); }
+.reveal-scale-in { transform: scale(0.96); }
+
+.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { transition: none; opacity: 1; transform: none; }
+}
+
+@keyframes scroll-bob {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50% { transform: translateY(6px); opacity: 0.9; }
+}
+
+.animate-scroll-bob { animation: scroll-bob 2s ease-in-out infinite; }
+
+/* ---------------------------------------------------------------------------
+   Landing page: range slider (interactive demo)
+--------------------------------------------------------------------------- */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #6366f1 0%,
+    #6366f1 var(--range-fill, 50%),
+    rgba(255, 255, 255, 0.1) var(--range-fill, 50%),
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #a855f7);
+  border: 2px solid #0a0a0c;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #a855f7);
+  border: 2px solid #0a0a0c;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover,
+input[type="range"]::-moz-range-thumb:active {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   Landing page: misc decoration
+--------------------------------------------------------------------------- */
+
+.landing-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.divider-dashed {
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
 /* Delete buttons: opacity-0 by default (hover reveals on mouse), always visible on touch */
 @media (hover: none) and (pointer: coarse) {
   .delete-btn { opacity: 1 !important; }
